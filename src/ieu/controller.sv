@@ -187,7 +187,7 @@ module controller import cvw::*;  #(parameter cvw_t P) (
     assign INoShiftD        = ((Funct3D != 3'b001) & (Funct3D != 3'b101));
     assign IFunctD          = IShiftD | INoShiftD;
     assign RFunctD          = ((Funct3D == 3'b000 | Funct3D == 3'b101) & Funct7b5D) | FunctCZeroD | Funct7ZeroD;
-    assign MFunctD          = (Funct7D == 7'b0000001) & (P.M_SUPPORTED | (P.ZMMUL_SUPPORTED & ~Funct3D[2])); // muldiv
+    assign MFunctD = (Funct7D == 7'b0000001) & P.M_SUPPORTED; // *** Replace with your logic
     assign LFunctD          = Funct3D == 3'b000 | Funct3D == 3'b001 | Funct3D == 3'b010 | Funct3D == 3'b100 | Funct3D == 3'b101 | 
                               ((P.XLEN == 64) & (Funct3D == 3'b011 | Funct3D == 3'b110));
     assign FLSFunctD        = (STATUS_FS != 2'b00) & ((Funct3D == 3'b010 & P.F_SUPPORTED) | (Funct3D == 3'b011 & P.D_SUPPORTED) |
@@ -220,7 +220,7 @@ module controller import cvw::*;  #(parameter cvw_t P) (
   end else begin:legalcheck2
     assign IFunctD = 1'b1; // Don't bother to separate out shift decoding
     assign RFunctD = ~Funct7D[0]; // Not a multiply
-    assign MFunctD = Funct7D[0] & (P.M_SUPPORTED | (P.ZMMUL_SUPPORTED & ~Funct3D[2])); // muldiv
+    assign MFunctD = Funct7D[0] & P.M_SUPPORTED; // *** Replace with your logic
     assign LFunctD = 1'b1; // don't bother to check Funct3 for loads
     assign FLSFunctD = 1'b1; // don't bother to check Func3 for floating-point loads/stores
     assign FenceFunctD = 1'b1; // don't bother to check fields for fences
@@ -275,12 +275,12 @@ module controller import cvw::*;  #(parameter cvw_t P) (
       7'b0110011: if (RFunctD)
                       ControlsD = `CTRLW'b1_000_00_00_000_0_1_0_0_0_0_0_0_0_00_0_0; // R-type 
                   else if (MFunctD)
-                      ControlsD = `CTRLW'b1_000_00_00_011_0_0_0_0_0_0_0_0_1_00_0_0; // Multiply/Divide
+                      ControlsD = `CTRLW'b1_000_00_00_011_0_0_0_0_0_0_0_0_1_00_0_0; // *** Replace with your logic
       7'b0110111:     ControlsD = `CTRLW'b1_100_01_00_000_0_0_0_1_0_0_0_0_0_00_0_0; // lui
       7'b0111011: if (RWFunctD)
                       ControlsD = `CTRLW'b1_000_00_00_000_0_1_0_0_1_0_0_0_0_00_0_0; // R-type W instructions for RV64i
                   else if (MWFunctD)
-                      ControlsD = `CTRLW'b1_000_00_00_011_0_0_0_0_1_0_0_0_1_00_0_0; // W-type Multiply/Divide
+                      ControlsD = `CTRLW'b1_000_00_00_011_0_0_0_0_1_0_0_0_1_00_0_0; // *** Replace with your logic
       7'b1100011: if (BFunctD)   
                       ControlsD = `CTRLW'b0_010_11_00_000_1_0_0_0_0_0_0_0_0_00_0_0; // branches
       7'b1100111: if (JRFunctD)
