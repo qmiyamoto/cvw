@@ -15,8 +15,22 @@ typedef union sp {
 } sp;
 
 // lists of tests, terminated with 0x8000
+// lists of fadd_0 and fma_0 tests
 uint16_t easyExponents[] = {15, 0x8000};
 uint16_t easyFracts[] = {0, 0x200, 0x8000}; // 1.0 and 1.1
+
+// lists of fmul_1, fmul_2, fadd_1, and fadd_2 tests
+uint16_t medExponents[] = {1, 2, 3, 5, 16, 18, 23, 27, 29, 31, 0x8000};
+uint16_t medFracts[] = {0x001, 0x400, 0x00f, 0x4f7, 0x555, 0x693, 0x900, 0xcd3, 0xded, 0xfe6, 0x8000};
+
+// lists of fma_1 and fma_2 tests
+uint16_t medLiteExponents[] = {1, 5, 16, 29, 31, 0x8000};
+uint16_t medLiteFracts[] = {0x001, 0x00f, 0x693, 0xded, 0x8000};
+
+// lists of fma_special_rz and fma_special_{rne, rp, rm} tests
+// includes zero, NaN, and Inf inputs
+uint16_t specialLiteExponents[] = {1, 5, 16, 29, 31, 0x8000};
+uint16_t specialLiteFracts[] = {0, 0x00f, 0x693, 0xded, 0x8000};
 
 void softfloatInit(void) {
     softfloat_roundingMode = softfloat_round_minMag; 
@@ -129,19 +143,110 @@ void genMulTests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, 
     fclose(fptr);
 }
 
+// function for fadd_{0, 1, 2}
+void genAddTests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, int roundingMode, int zeroAllowed, int infAllowed, int nanAllowed) {
+    int i, j, k, numCases;
+    float16_t x, y, z;
+    float16_t cases[100000];
+    FILE *fptr;
+    char fn[80];
+ 
+    sprintf(fn, "work/%s.tv", testName);
+    if ((fptr = fopen(fn, "w")) == 0) {
+        printf("Error opening to write file %s.  Does directory exist?\n", fn);
+        exit(1);
+    }
+    prepTests(e, f, testName, desc, cases, fptr, &numCases);
+    for (i=0; i < numCases; i++) { 
+        x.v = cases[i].v;
+        for (j=0; j<numCases; j++) {
+            z.v = cases[j].v;           // swaps out y for z because we want to add now (without multiplication)
+            for (k=0; k<=sgn; k++) {
+                z.v ^= (k<<15);         // sets the sign of z only if the sign bit is set, as well
+                genCase(fptr, x, y, z, 0, 1, 0, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);      // sets the control signals accordingly
+            }
+        }
+    }
+    fclose(fptr);
+}
+
+// function for fma_{0, 1, 2} and fma_special_rz
+void genMATests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, int roundingMode, int zeroAllowed, int infAllowed, int nanAllowed) {
+    int i, j, k, l, m, n, numCases;
+    float16_t x, y, z;
+    float16_t cases[100000];
+    FILE *fptr;
+    char fn[80];
+ 
+    sprintf(fn, "work/%s.tv", testName);
+    if ((fptr = fopen(fn, "w")) == 0) {
+        printf("Error opening to write file %s.  Does directory exist?\n", fn);
+        exit(1);
+    }
+    prepTests(e, f, testName, desc, cases, fptr, &numCases);
+    for (i=0; i < numCases; i++) {          // create separate loops for each input variable, so as to create the maximum number of tests possible
+        x.v = cases[i].v;
+        for (j=0; j<numCases; j++) {
+            y.v = cases[j].v;
+            for (k=0; k<numCases; k++) {
+                z.v = cases[k].v;
+                for (l=0; l<=sgn; l++) {        // enables negative numbers for all input variables
+                    x.v ^= (l<<15);
+                    for (m=0; m<=sgn; m++) {
+                        y.v ^= (m<<15);
+                        for(n=0; n<=sgn; n++) {
+                            z.v ^= (n<<15);
+                            genCase(fptr, x, y, z, 1, 1, 0, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);      // sets the control signals accordingly
+                        }
+                    }
+                }
+            }
+        }
+    }
+    fclose(fptr);
+}
+
 int main()
 {
     if (system("mkdir -p work") != 0) exit(1); // create work directory if it doesn't exist
     softfloatInit(); // configure softfloat modes
  
     // Test cases: multiplication
-    genMulTests(easyExponents, easyFracts, 0, "fmul_0", "// Multiply with exponent of 0, significand of 1.0 and 1.1, RZ", 0, 0, 0, 0);
+    genMulTests(easyExponents, easyFracts, 0, "fmul_0", "// Multiply with exponent of 0, significands of 1.0 and 1.1, RZ", 0, 0, 0, 0);
 
 /*  // example of how to generate tests with a different rounding mode
     softfloat_roundingMode = softfloat_round_near_even; 
-    genMulTests(easyExponents, easyFracts, 0, "fmul_0_rne", "// Multiply with exponent of 0, significand of 1.0 and 1.1, RNE", 1, 0, 0, 0); */
+    genMulTests(easyExponents, easyFracts, 0, "fmul_0_rne", "// Multiply with exponent of 0, significands of 1.0 and 1.1, RNE", 1, 0, 0, 0); */
 
     // Add your cases here
-  
+    // fmul_1 test cases
+    genMulTests(medExponents, medFracts, 0, "fmul_1", "// Multiplies slightly more complicated combinations of numbers, RZ", 0, 0, 0, 0);
+
+    // fmul_2 test cases
+    genMulTests(medExponents, medFracts, 1, "fmul_2", "// Multiplies slightly more complicated combinations of numbers (including negative values), RZ", 0, 0, 0, 0);
+
+    // fadd_{0, 1, 2} test cases
+    genAddTests(easyExponents, easyFracts, 0, "fadd_0", "// Add with exponent of 0, significands of 1.0 and 1.1, RZ", 0, 0, 0, 0);
+    genAddTests(medExponents, medFracts, 0, "fadd_1", "// Adds slightly more complicated combinations of numbers, RZ", 0, 0, 0, 0);
+    genAddTests(medExponents, medFracts, 1, "fadd_2", "// Adds slightly more complicated combinations of numbers (including negative values), RZ", 0, 0, 0, 0);
+
+    // fma_{0, 1, 2} test cases
+    genMATests(easyExponents, easyFracts, 0, "fma_0", "// Add and multiply with exponent of 0, significands of 1.0 and 1.1, RZ", 0, 1, 1, 1);
+    genMATests(medLiteExponents, medLiteFracts, 0, "fma_1", "// Adds and multiplies slightly more complicated combinations of numbers, RZ", 0, 1, 1, 1);
+    genMATests(medLiteExponents, medLiteFracts, 1, "fma_2", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RZ", 0, 1, 1, 1);
+
+    // fma_special_rz test cases
+    genMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rz", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RZ", 0, 1, 1, 1);
+   
+    // fma_special_{rne, rp, rm} test cases
+    softfloat_roundingMode = softfloat_round_near_even; 
+    genMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rne", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RNE", 0b01, 1, 1, 1);
+    
+    softfloat_roundingMode = softfloat_round_min; 
+    genMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rn", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RN", 0b11, 1, 1, 1);
+    
+    softfloat_roundingMode = softfloat_round_max; 
+    genMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rp", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RP", 0b10, 1, 1, 1);
+
     return 0;
 }

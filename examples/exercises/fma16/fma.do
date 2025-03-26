@@ -8,7 +8,7 @@ onbreak {resume}
 # create library
 vlib worklib
 
-vlog -lint -sv -work worklib fma16.sv testbench.sv
+vlog -lint -sv -work worklib fma16.sv multiply.sv testbench.sv
 vopt +acc worklib.testbench_fma16 -work worklib -o testbenchopt
 vsim -lib worklib testbenchopt
 
@@ -21,3 +21,5 @@ add wave sim:/testbench_fma16/result
 add wave sim:/testbench_fma16/rexpected
 
 run -all
+
+exit
