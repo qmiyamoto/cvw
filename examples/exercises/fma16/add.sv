@@ -12,11 +12,11 @@ module add(input logic [15:0] x, y, z,
     logic [21:0] prepended_product;
     
     logic sign_addend, sticky_bit;
-    logic signed [6:0] A_count;
-    logic [32:0] fraction_addend, inverted_fraction_addend, fraction_killed_product;
+    logic [6:0] A_count;
+    logic [32:0] fraction_addend, fraction_killed_product;
     logic [43:0] preshifted_z, shifted_z;
     logic kill_z, kill_product, invert_addend;
-    logic [33:0] pre_sum, negative_pre_sum;
+    logic [33:0] inverted_fraction_addend, pre_sum, negative_pre_sum;
     logic [43:0] pre_normalized_fraction_sum, normalized_fraction_sum;
     logic negative_sum;
     logic [5:0] leading_one;
@@ -42,7 +42,7 @@ module add(input logic [15:0] x, y, z,
     always_comb
     begin
         if ((x == 16'b0) | (y == 16'b0))
-            // keep the exponent at zero if either x or y has exponents equivalent ot such
+            // keep the exponent at zero if either x or y has exponents equivalent to such
             exponent_product = 6'b0;
 
         else
@@ -61,8 +61,8 @@ module add(input logic [15:0] x, y, z,
     assign A_count = ({1'b0, exponent_product} - {2'b0, exponent_z} + 7'd12);
 
     // if z is too small to affect anything but the sticky bit, kill it
-    // (in other words, assert kill_z if A_count > (3N_f + 3) or z is zero)
-    assign kill_z = ((A_count > 7'd33) | (z == 16'b0));
+    // (in other words, assert kill_z if A_count > (3N_f + 3) or if z is zero)
+    assign kill_z = (((A_count > 7'd33) & (A_count[6] == 1'b0)) | (z == 16'b0));
     
     // preshift the fraction bits of z so as to eradicate the need for (more complicated) bidirectional shifting
     // place z in the uppermost bits and prepend a one
@@ -107,7 +107,7 @@ module add(input logic [15:0] x, y, z,
     end
 
     // align z to create a proper addend
-    // ignore the bottom (N_f + 1) bits
+    // ignore the bottom N_f bits
     assign fraction_addend = shifted_z[43:11];
 
     // set the sign of the addend via detection of an effective negative sign
@@ -121,12 +121,12 @@ module add(input logic [15:0] x, y, z,
     always_comb
     begin
         if (invert_addend)
-            // if the product and addend have opposite signs, invert the latter
-            inverted_fraction_addend = ~fraction_addend;
+            // if the product and addend have opposite signs, invert the latter and sign extend the negative
+            inverted_fraction_addend = {1'b1, ~fraction_addend};
 
         else
-            // otherwise, keep the addend the same
-            inverted_fraction_addend = fraction_addend;
+            // otherwise, keep the addend the same and sign extend a zero
+            inverted_fraction_addend = {1'b0, fraction_addend};
     end
 
     // zero out the fraction bits of the product when killing it and append two zeros to align with the addend
@@ -135,7 +135,7 @@ module add(input logic [15:0] x, y, z,
     // optimize addition and subtraction with the use of two adders
     // perform addition or subtraction between the addend and product, with correction for a negative (addend) sticky bit
     // (first adder)
-    assign pre_sum = ({1'b0, fraction_killed_product} + {inverted_fraction_addend[32], inverted_fraction_addend} + {33'b0, ((~sticky_bit | kill_product) & invert_addend)});
+    assign pre_sum = ({1'b0, fraction_killed_product} + inverted_fraction_addend + {33'b0, ((~sticky_bit | kill_product) & invert_addend)});
     // subtract the product from the addend, with correction for a negative (product) sticky bit
     // (second adder)
     assign negative_pre_sum = ({1'b0, fraction_addend} + ~{1'b0, fraction_killed_product} + {33'b0, (~sticky_bit | ~kill_product)});
@@ -146,7 +146,6 @@ module add(input logic [15:0] x, y, z,
     // determine the sign of the final sum, accounting for negatives
     assign sign_sum = (sign_product ^ negative_sum);
     
-
     // determine the magnitude of the fraction bits of the sum
     always_comb
     begin
@@ -156,10 +155,12 @@ module add(input logic [15:0] x, y, z,
         
         else
             // otherwise, take the result to be that garnered from the first adder
-            // pre_normalized_fraction_sum = (pre_sum >> 10);
+            // this is essentially the same as doing pre_normalized_fraction_sum = (pre_sum >> 10), but without the expensive hardware
+            // this also prevents an accidental shifting out of important, non-trivial digits
             pre_normalized_fraction_sum = {10'b0, pre_sum};
     end
 
+    // use a priority encoder to determine the location of the leading one in the fraction bits of the pre-normalized sum  
     priority_encoder prior_enc(pre_normalized_fraction_sum, leading_one);
 
     // calculate the exponent of the sum before normalization
@@ -167,23 +168,22 @@ module add(input logic [15:0] x, y, z,
     begin
         if (kill_product)
             // if killing the product, the exponent of the sum is equal to that of z
-            exponent_sum = {1'b0, exponent_z};
+            // note that the priority encoder counts from right to left, so there must be some correction
+            // in this case, subtracting the output location from 2N_f garners the right result
+            exponent_sum = {1'b0, (exponent_z - (20 - leading_one))};
         
         else
             // otherwise, the exponent of the sum is equal to that of the product minus the amount shifted by
+            // again, there is a correction of 2N_f - leading_one
             exponent_sum = (exponent_product - (20 - leading_one));
     end
 
+    // normalize the fraction of the sum by shifting the pre-normalized fraction bits by N_f + (2N_f - leading_one)
+    // by doing so, the leading one will always be in the same place no matter which number is being taken under consideration
+    assign normalized_fraction_sum = (pre_normalized_fraction_sum << (32 - leading_one)));
 
-
-
-    // FINISH THE LAST SHIFT :(
-    // find the leading one (with a priority encoder), preshift, and shift to normalize
-
-      
-
-    assign normalized_fraction_sum = (pre_normalized_fraction_sum << (20 + (12 - leading_one)));
-
+    // select the desired bits of the now-normalized sum to get the finalized components of the sum fraction
+    // (acquiring said desired bits involves ignoring the first N_f + 2 and last 2N_f + 1 bits)
     assign fraction_sum = normalized_fraction_sum[31:22];
 
     // return the final result of both the multiplication and addition
