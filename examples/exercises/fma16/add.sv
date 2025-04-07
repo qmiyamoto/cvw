@@ -19,7 +19,7 @@ module add(input logic [15:0] x, y, z,
     logic [33:0] inverted_fraction_addend, pre_sum, negative_pre_sum;
     logic [43:0] pre_normalized_fraction_sum, normalized_fraction_sum;
     logic negative_sum;
-    logic [5:0] leading_one;
+    logic [5:0] leading_one, corrected_index;
 
     logic invalid, overflow, underflow, inexact;
 
@@ -53,6 +53,11 @@ module add(input logic [15:0] x, y, z,
 
     // determine the sign of the product, accounting for negatives
     assign sign_product = (sign_x ^ sign_y);
+
+
+
+
+
 
     // --------------------
 
@@ -163,24 +168,27 @@ module add(input logic [15:0] x, y, z,
     // use a priority encoder to determine the location of the leading one in the fraction bits of the pre-normalized sum  
     priority_encoder prior_enc(pre_normalized_fraction_sum, leading_one);
 
+    // note that the priority encoder counts from right to left, so there must be some correction
+    assign corrected_index = 6'd20 - leading_one;
+
     // calculate the exponent of the sum before normalization
     always_comb
     begin
         if (kill_product)
             // if killing the product, the exponent of the sum is equal to that of z
-            // note that the priority encoder counts from right to left, so there must be some correction
+            // note again that we need to account for the corrected index from the priority encoder
             // in this case, subtracting the output location from 2N_f garners the right result
-            exponent_sum = {1'b0, (exponent_z - (20 - leading_one))};
+            exponent_sum = {1'b0, (exponent_z - corrected_index[4:0])};
         
         else
             // otherwise, the exponent of the sum is equal to that of the product minus the amount shifted by
             // again, there is a correction of 2N_f - leading_one
-            exponent_sum = (exponent_product - (20 - leading_one));
+            exponent_sum = (exponent_product - corrected_index);
     end
 
     // normalize the fraction of the sum by shifting the pre-normalized fraction bits by N_f + (2N_f - leading_one)
     // by doing so, the leading one will always be in the same place no matter which number is being taken under consideration
-    assign normalized_fraction_sum = (pre_normalized_fraction_sum << (32 - leading_one)));
+    assign normalized_fraction_sum = (pre_normalized_fraction_sum << (32 - leading_one));
 
     // select the desired bits of the now-normalized sum to get the finalized components of the sum fraction
     // (acquiring said desired bits involves ignoring the first N_f + 2 and last 2N_f + 1 bits)
