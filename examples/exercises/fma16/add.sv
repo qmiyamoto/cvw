@@ -6,7 +6,8 @@ module add(input logic [15:0] x, y, z,
 
     logic sign_x, sign_y, sign_z, sign_product, sign_sum;
     logic [4:0] exponent_x, exponent_y, exponent_z;
-    logic [5:0] exponent_product, exponent_sum;
+    logic [5:0] exponent_sum;
+    logic [6:0] exponent_product;
     logic [9:0] fraction_x, fraction_y, fraction_z, fraction_sum;
     logic [10:0] prepended_x, prepended_y;
     logic [21:0] prepended_product;
@@ -43,31 +44,26 @@ module add(input logic [15:0] x, y, z,
     begin
         if ((x == 16'b0) | (y == 16'b0))
             // keep the exponent at zero if either x or y has exponents equivalent to such
-            exponent_product = 6'b0;
+            exponent_product = 7'b0;
 
         else
             // otherwise, add the exponent bits of the two and account for bias
             // (the bias for half-precision numbers is 15)
-            exponent_product = (exponent_x + exponent_y - 5'd15);
+            exponent_product = ({2'b0, exponent_x} + {2'b0, exponent_y} - 7'd15);
     end
 
     // determine the sign of the product, accounting for negatives
     assign sign_product = (sign_x ^ sign_y);
 
-
-
-
-
-
     // --------------------
 
     // ADDITION LOGIC:
     // set the alignment shift amount
-    assign A_count = ({1'b0, exponent_product} - {2'b0, exponent_z} + 7'd12);
+    assign A_count = (exponent_product - {2'b0, exponent_z} + 7'd12);
 
     // if z is too small to affect anything but the sticky bit, kill it
     // (in other words, assert kill_z if A_count > (3N_f + 3) or if z is zero)
-    assign kill_z = (((A_count > 7'd33) & (A_count[6] == 1'b0)) | (z == 16'b0));
+    assign kill_z = (($signed(A_count) > 33) | (z == 16'b0));
     
     // preshift the fraction bits of z so as to eradicate the need for (more complicated) bidirectional shifting
     // place z in the uppermost bits and prepend a one
@@ -75,7 +71,7 @@ module add(input logic [15:0] x, y, z,
     
     // if the product is too small to affect anything but the sticky bit, kill it
     // (in other words, assert kill_product if A_count is negative, or if either x or y are zero)
-    assign kill_product = ((A_count[6]) | (x == 16'b0) | (y == 16'b0));
+    assign kill_product = (($signed(A_count) < 0) | (x == 16'b0) | (y == 16'b0));
 
     // perform a variable-alignment shift on z to the right
     always_comb
@@ -183,7 +179,7 @@ module add(input logic [15:0] x, y, z,
         else
             // otherwise, the exponent of the sum is equal to that of the product minus the amount shifted by
             // again, there is a correction of 2N_f - leading_one
-            exponent_sum = (exponent_product - corrected_index);
+            exponent_sum = {exponent_product - {1'b0, corrected_index}}[5:0];
     end
 
     // normalize the fraction of the sum by shifting the pre-normalized fraction bits by N_f + (2N_f - leading_one)
@@ -204,7 +200,7 @@ module add(input logic [15:0] x, y, z,
     // for the fmul_2.tv tests, we don't need to handle invalid numbers
     assign invalid = 1'b0;
     // if the intermediate exponent is greater than the maximum possible value of the resultant exponent, there's overflow    
-    assign overflow = (exponent_product > 6'd31);
+    assign overflow = (exponent_product > 7'd31);
     // if there is rounding or overflow, the product must be inexact
     assign inexact = (|prepended_product[9:0] | overflow);
     // for this project, we don't need to handle cases with underflow

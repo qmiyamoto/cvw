@@ -170,8 +170,44 @@ void genAddTests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, 
     fclose(fptr);
 }
 
-// function for fma_{0, 1, 2} and fma_special_rz
+// function for fma_{0, 1, 2}
 void genMATests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, int roundingMode, int zeroAllowed, int infAllowed, int nanAllowed) {
+    int i, j, k, l, m, n, numCases;
+    float16_t x, y, z;
+    float16_t cases[100000];
+    FILE *fptr;
+    char fn[80];
+ 
+    sprintf(fn, "work/%s.tv", testName);
+    if ((fptr = fopen(fn, "w")) == 0) {
+        printf("Error opening to write file %s.  Does directory exist?\n", fn);
+        exit(1);
+    }
+    prepTests(e, f, testName, desc, cases, fptr, &numCases);
+    for (i=0; i < numCases; i++) {          // create separate loops for each input variable, so as to create the maximum number of tests possible
+        x.v = cases[i].v;
+        for (j=0; j<numCases; j++) {
+            y.v = cases[j].v;
+            for (k=0; k<numCases; k++) {
+                z.v = cases[k].v;
+                for (l=0; l<=sgn; l++) {        // enables negative numbers for all input variables
+                    x.v ^= (l<<15);
+                    for (m=0; m<=sgn; m++) {
+                        y.v ^= (m<<15);
+                        for(n=0; n<=sgn; n++) {
+                            z.v ^= (n<<15);
+                            genCase(fptr, x, y, z, 1, 1, 0, 0, roundingMode, zeroAllowed, infAllowed, nanAllowed);      // sets the control signals accordingly
+                        }
+                    }
+                }
+            }
+        }
+    }
+    fclose(fptr);
+}
+
+// function for fma_special_rz and fma_special_{rne, rp, rm}
+void genspecialMATests(uint16_t *e, uint16_t *f, int sgn, char *testName, char *desc, int roundingMode, int zeroAllowed, int infAllowed, int nanAllowed) {
     int i, j, k, l, m, n, numCases;
     float16_t x, y, z;
     float16_t cases[100000];
@@ -231,22 +267,22 @@ int main()
     genAddTests(medExponents, medFracts, 1, "fadd_2", "// Adds slightly more complicated combinations of numbers (including negative values), RZ", 0, 0, 0, 0);
 
     // fma_{0, 1, 2} test cases
-    genMATests(easyExponents, easyFracts, 0, "fma_0", "// Add and multiply with exponent of 0, significands of 1.0 and 1.1, RZ", 0, 1, 1, 1);
-    genMATests(medLiteExponents, medLiteFracts, 0, "fma_1", "// Adds and multiplies slightly more complicated combinations of numbers, RZ", 0, 1, 1, 1);
-    genMATests(medLiteExponents, medLiteFracts, 1, "fma_2", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RZ", 0, 1, 1, 1);
+    genMATests(easyExponents, easyFracts, 0, "fma_0", "// Add and multiply with exponent of 0, significands of 1.0 and 1.1, RZ", 0, 0, 0, 0);
+    genMATests(medLiteExponents, medLiteFracts, 0, "fma_1", "// Adds and multiplies slightly more complicated combinations of numbers, RZ", 0, 0, 0, 0);
+    genMATests(medLiteExponents, medLiteFracts, 1, "fma_2", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RZ", 0, 0, 0, 0);
 
     // fma_special_rz test cases
-    genMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rz", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RZ", 0, 1, 1, 1);
+    genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rz", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RZ", 0, 1, 1, 1);
    
     // fma_special_{rne, rp, rm} test cases
     softfloat_roundingMode = softfloat_round_near_even; 
-    genMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rne", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RNE", 0b01, 1, 1, 1);
+    genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rne", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RNE", 0b01, 1, 1, 1);
     
     softfloat_roundingMode = softfloat_round_min; 
-    genMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rn", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RN", 0b11, 1, 1, 1);
+    genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rn", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RN", 0b11, 1, 1, 1);
     
     softfloat_roundingMode = softfloat_round_max; 
-    genMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rp", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RP", 0b10, 1, 1, 1);
+    genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rp", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RP", 0b10, 1, 1, 1);
 
     return 0;
 }
