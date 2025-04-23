@@ -1,26 +1,27 @@
-module add(input logic [15:0] x, y, z,
-           input logic mul, add, negp, negz, 
-           input logic [1:0] roundmode,
+module add(input logic [15:0]  x, y, z,
+           input logic         mul, add, negp, negz, 
+           input logic [1:0]   roundmode,
            output logic [15:0] result,
-           output logic [3:0] flags);
+           output logic [3:0]  flags);
 
-    logic sign_x, sign_y, sign_z, sign_product, sign_sum;
-    logic [4:0] exponent_x, exponent_y, exponent_z;
-    logic [5:0] exponent_sum;
-    logic [6:0] exponent_product;
-    logic [9:0] fraction_x, fraction_y, fraction_z, fraction_sum;
+    logic        sign_x, sign_y, sign_z, sign_product, sign_sum;
+    logic [4:0]  exponent_x, exponent_y, exponent_z;
+    logic [5:0]  exponent_sum;
+    logic [6:0]  exponent_product;
+    logic [9:0]  fraction_x, fraction_y, fraction_z, fraction_sum;
     logic [10:0] prepended_x, prepended_y;
     logic [21:0] prepended_product;
     
-    logic sign_addend, sticky_bit;
-    logic [6:0] A_count;
+    logic        sign_addend, sticky_bit;
+    logic [6:0]  A_count;
     logic [32:0] fraction_addend, fraction_killed_product;
     logic [43:0] preshifted_z, shifted_z;
-    logic kill_z, kill_product, invert_addend;
+    logic        kill_z, kill_product, invert_addend;
     logic [33:0] inverted_fraction_addend, pre_sum, negative_pre_sum;
     logic [43:0] pre_normalized_fraction_sum, normalized_fraction_sum;
-    logic negative_sum;
-    logic [5:0] leading_one, corrected_index;
+    logic        negative_sum;
+    logic [5:0]  leading_one, corrected_index;
+    logic [15:0] result_sum;
 
     logic invalid, overflow, underflow, inexact;
 
@@ -190,9 +191,17 @@ module add(input logic [15:0] x, y, z,
     // (acquiring said desired bits involves ignoring the first N_f + 2 and last 2N_f + 1 bits)
     assign fraction_sum = normalized_fraction_sum[31:22];
 
-    // return the final result of both the multiplication and addition
-    assign result = {sign_sum, exponent_sum[4:0], fraction_sum};
+    // assemble the overall result of both the multiplication and addition
+    assign result_sum = {sign_sum, exponent_sum[4:0], fraction_sum};
 
+    // check for special cases and return the correct result accordingly
+    special_case_determiner scd(x, y, result_sum, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, result);
+
+    // --------------------
+
+    // ROUNDING LOGIC:
+    // 
+    
     // --------------------
 
     // FLAG LOGIC:
