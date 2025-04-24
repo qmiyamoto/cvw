@@ -1,7 +1,7 @@
-module special_case_determiner(input logic [15:0]  x, y, result_sum,
+module special_case_determiner(input logic  [15:0] x, y, result_sum,
                                input logic         sign_x, sign_y, sign_z, sign_product,
-                               input logic [4:0]   exponent_x, exponent_y, exponent_z,
-                               input logic [9:0]   fraction_x, fraction_y, fraction_z,
+                               input logic  [4:0]  exponent_x, exponent_y, exponent_z,
+                               input logic  [9:0]  fraction_x, fraction_y, fraction_z,
                                output logic [15:0] result);
     
     logic nan_x, nan_y, nan_z,

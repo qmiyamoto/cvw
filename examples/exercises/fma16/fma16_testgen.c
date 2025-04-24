@@ -277,7 +277,7 @@ int main()
     // fma_special_rz test cases
     genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rz", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RZ", 0, 1, 1, 1);
    
-    // fma_special_{rne, rp, rm} test cases
+    // fma_special_{rne, rp, rn} test cases
     softfloat_roundingMode = softfloat_round_near_even; 
     genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rne", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RNE", 0b01, 1, 1, 1);
     

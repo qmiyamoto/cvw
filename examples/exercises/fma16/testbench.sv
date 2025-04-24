@@ -6,7 +6,7 @@ module testbench_fma16;
   logic        mul, add, negp, negz;
   logic [1:0]  roundmode;
   logic [31:0] vectornum, errors;
-  logic [75:0] testvectors[10000:0];
+  logic [75:0] testvectors[1000000:0];
   logic [3:0]  flags, flagsexpected; // Invalid, Overflow, Underflow, Inexact
 
   // instantiate device under test

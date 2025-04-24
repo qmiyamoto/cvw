@@ -1,16 +1,16 @@
 {
-  "extensionVersion": "1.3.2",
+  "extensionVersion": "1.3.3",
   "fileName": "/home/qmiyamoto/cvw/examples/exercises/fma16/fma16.vcd",
-  "markerTime": 1,
+  "markerTime": 11,
   "altMarkerTime": null,
   "selectedSignal": {
-    "name": "testbench_fma16.dut.ad.pre_normalized_fraction_sum",
+    "name": "testbench_fma16.dut.ad.round.fraction_rounded",
     "numberFormat": "binary",
-    "msb": 33,
+    "msb": 11,
     "lsb": 0
   },
-  "zoomRatio": 17.305084745762713,
-  "scrollLeft": 170,
+  "zoomRatio": 7.807339449541284,
+  "scrollLeft": 269,
   "displayedSignals": [
     {
       "netlistId": 133,
@@ -27,28 +27,28 @@
       "renderType": "binary"
     },
     {
-      "netlistId": 167,
+      "netlistId": 169,
       "name": "testbench_fma16.dut.ad.inexact",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 166,
+      "netlistId": 168,
       "name": "testbench_fma16.dut.ad.underflow",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 165,
+      "netlistId": 167,
       "name": "testbench_fma16.dut.ad.overflow",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 164,
+      "netlistId": 166,
       "name": "testbench_fma16.dut.ad.invalid",
       "numberFormat": "binary",
       "colorIndex": 0,
@@ -97,42 +97,42 @@
       "renderType": "multiBit"
     },
     {
-      "netlistId": 157,
+      "netlistId": 156,
       "name": "testbench_fma16.dut.ad.invert_addend",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 156,
+      "netlistId": 155,
       "name": "testbench_fma16.dut.ad.kill_product",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 154,
+      "netlistId": 153,
       "name": "testbench_fma16.dut.ad.shifted_z",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "multiBit"
     },
     {
-      "netlistId": 153,
+      "netlistId": 152,
       "name": "testbench_fma16.dut.ad.preshifted_z",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "multiBit"
     },
     {
-      "netlistId": 155,
+      "netlistId": 154,
       "name": "testbench_fma16.dut.ad.kill_z",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 152,
+      "netlistId": 151,
       "name": "testbench_fma16.dut.ad.fraction_killed_product",
       "numberFormat": "hexadecimal",
       "colorIndex": 0,
@@ -146,7 +146,7 @@
       "renderType": "multiBit"
     },
     {
-      "netlistId": 151,
+      "netlistId": 157,
       "name": "testbench_fma16.dut.ad.inverted_fraction_addend",
       "numberFormat": "hexadecimal",
       "colorIndex": 0,
@@ -244,16 +244,16 @@
       "renderType": "multiBit"
     },
     {
-      "netlistId": 138,
+      "netlistId": 139,
       "name": "testbench_fma16.dut.ad.exponent_product",
-      "numberFormat": "decimal",
+      "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "multiBit"
     },
     {
-      "netlistId": 139,
+      "netlistId": 138,
       "name": "testbench_fma16.dut.ad.exponent_sum",
-      "numberFormat": "decimal",
+      "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "multiBit"
     },
@@ -277,6 +277,97 @@
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
+    },
+    {
+      "netlistId": 300,
+      "name": "testbench_fma16.dut.ad.round.exponent_rounded",
+      "numberFormat": "hexadecimal",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 399,
+      "name": "testbench_fma16.dut.ad.scd1.result",
+      "numberFormat": "hexadecimal",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 508,
+      "name": "testbench_fma16.dut.ad.scd2.result",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 128,
+      "name": "testbench_fma16.dut.ad.result",
+      "numberFormat": "hexadecimal",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 164,
+      "name": "testbench_fma16.dut.ad.corrected_index",
+      "numberFormat": "signed",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 171,
+      "name": "testbench_fma16.dut.ad.special_case",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "binary"
+    },
+    {
+      "netlistId": 299,
+      "name": "testbench_fma16.dut.ad.round.fraction_rounded",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 296,
+      "name": "testbench_fma16.dut.ad.round.truncated",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 297,
+      "name": "testbench_fma16.dut.ad.round.rounded",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 165,
+      "name": "testbench_fma16.dut.ad.result_sum",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 170,
+      "name": "testbench_fma16.dut.ad.result_rounded",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 172,
+      "name": "testbench_fma16.dut.ad.rz_result",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "multiBit"
+    },
+    {
+      "netlistId": 173,
+      "name": "testbench_fma16.dut.ad.else_result",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "multiBit"
     },
     {
       "netlistId": 71,

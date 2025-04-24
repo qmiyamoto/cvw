@@ -1,6 +1,6 @@
-module add(input logic [15:0]  x, y, z,
+module add(input logic  [15:0] x, y, z,
            input logic         mul, add, negp, negz, 
-           input logic [1:0]   roundmode,
+           input logic  [1:0]  roundmode,
            output logic [15:0] result,
            output logic [3:0]  flags);
 
@@ -34,8 +34,8 @@ module add(input logic [15:0]  x, y, z,
     assign {sign_z, exponent_z, fraction_z} = z;
 
     // prepend a one to both fraction bits of x and y
-    assign prepended_x = (fraction_x + 11'd1024);
-    assign prepended_y = (fraction_y + 11'd1024);
+    assign prepended_x = {1'b1, fraction_x};
+    assign prepended_y = {1'b1, fraction_y};
 
     // multiply the fraction bits
     assign prepended_product = (prepended_x * prepended_y);
@@ -105,7 +105,8 @@ module add(input logic [15:0]  x, y, z,
         
         else
             // otherwise, set the sticky bit if any the fraction bits of z are nonzero
-            sticky_bit = |shifted_z[9:0];
+            sticky_bit = |(shifted_z[10:0]);
+            // CHANGED: sticky_bit = |(shifted_z[9:0]);
     end
 
     // align z to create a proper addend
@@ -137,11 +138,12 @@ module add(input logic [15:0]  x, y, z,
     // optimize addition and subtraction with the use of two adders
     // perform addition or subtraction between the addend and product, with correction for a negative (addend) sticky bit
     // (first adder)
-    assign pre_sum = ({1'b0, fraction_killed_product} + inverted_fraction_addend + {33'b0, ((~sticky_bit | kill_product) & invert_addend)});
+    // CHANGED: assign pre_sum = ({1'b0, fraction_killed_product} + inverted_fraction_addend + {33'b0, ((~sticky_bit | kill_product) & invert_addend)});
+    assign pre_sum = ({fraction_killed_product[32], fraction_killed_product} + inverted_fraction_addend + {33'b0, ((~sticky_bit | kill_product) & invert_addend)});
     // subtract the product from the addend, with correction for a negative (product) sticky bit
     // (second adder)
     assign negative_pre_sum = ({1'b0, fraction_addend} + ~{1'b0, fraction_killed_product} + {33'b0, (~sticky_bit | ~kill_product)});
-    
+
     // the result of subtracting the addend from the product is negative
     assign negative_sum = pre_sum[33];
 
@@ -169,19 +171,12 @@ module add(input logic [15:0]  x, y, z,
     assign corrected_index = 6'd20 - leading_one;
 
     // calculate the exponent of the sum before normalization
-    always_comb
-    begin
-        if (kill_product)
-            // if killing the product, the exponent of the sum is equal to that of z
-            // note again that we need to account for the corrected index from the priority encoder
-            // in this case, subtracting the output location from 2N_f garners the right result
-            exponent_sum = {1'b0, (exponent_z - corrected_index[4:0])};
-        
-        else
-            // otherwise, the exponent of the sum is equal to that of the product minus the amount shifted by
-            // again, there is a correction of 2N_f - leading_one
-            exponent_sum = {exponent_product - {1'b0, corrected_index}}[5:0];
-    end
+    // if killing the product, the exponent of the sum is equal to that of z
+    // note again that we need to account for the corrected index from the priority encoder
+    // (in this case, subtracting the output location from 2N_f garners the right result)
+    // otherwise, the exponent of the sum is equal to that of the product minus the amount shifted by
+    // (again, there is a correction of 2N_f - leading_one)
+    assign exponent_sum = (~kill_product) ? {exponent_product - {corrected_index[5], corrected_index}}[5:0] : {1'b0, (exponent_z - corrected_index[4:0])};
 
     // normalize the fraction of the sum by shifting the pre-normalized fraction bits by N_f + (2N_f - leading_one)
     // by doing so, the leading one will always be in the same place no matter which number is being taken under consideration
@@ -194,8 +189,36 @@ module add(input logic [15:0]  x, y, z,
     // assemble the overall result of both the multiplication and addition
     assign result_sum = {sign_sum, exponent_sum[4:0], fraction_sum};
 
+
+
+
+    logic [15:0] result_rounded;
+    logic special_case;
+
+    // rounding logic
+    rounding round(roundmode, sticky_bit, normalized_fraction_sum, exponent_sum, result_sum, result_rounded, special_case);
+
+
+    // probably change result_sum -> rounded_result below??
+
+    
+
+    logic [15:0] rz_result, else_result;
     // check for special cases and return the correct result accordingly
-    special_case_determiner scd(x, y, result_sum, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, result);
+    special_case_determiner scd1(x, y, result_sum, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, rz_result);
+    special_case_determiner scd2(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, else_result);
+
+    // special_case_determiner scd(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, result);
+
+
+    always_comb
+    begin
+        if (roundmode == 2'b00)
+            result = rz_result;
+
+        else
+            result = else_result;
+    end
 
     // --------------------
 
