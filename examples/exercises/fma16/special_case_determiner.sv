@@ -1,4 +1,4 @@
-module special_case_determiner(input logic  [15:0] x, y, result_sum,
+module special_case_determiner(input logic  [15:0] x, y, result_rounded,
                                input logic         sign_x, sign_y, sign_z, sign_product,
                                input logic  [4:0]  exponent_x, exponent_y, exponent_z,
                                input logic  [9:0]  fraction_x, fraction_y, fraction_z,
@@ -45,18 +45,18 @@ module special_case_determiner(input logic  [15:0] x, y, result_sum,
             result = 16'b0111111000000000;
 
         // if we add positive infinity to z, or our product to positive infinity, the output is positive infinity
-        else if ((((positive_infinity_x | positive_infinity_y | negative_infinity_x | negative_infinity_y) == 1'b0) & positive_infinity_z) |
-                   (positive_infinity_product & (positive_infinity_z == 1'b0)))
+        else if ((((negative_infinity_x | negative_infinity_y) == 1'b0) & positive_infinity_z) |
+                   (positive_infinity_product & (negative_infinity_z == 1'b0)))
             result = 16'b0111110000000000;
 
         // if we add negative infinity to z, or our product to negative infinity, the output is negative infinity
-        else if ((((positive_infinity_x | positive_infinity_y | negative_infinity_x | negative_infinity_y) == 1'b0) & negative_infinity_z) |
-                 (negative_infinity_product & (negative_infinity_z == 1'b0)))
+        else if ((((positive_infinity_x | positive_infinity_y) == 1'b0) & negative_infinity_z) |
+                 (negative_infinity_product & (positive_infinity_z == 1'b0)))
             result = 16'b1111110000000000;
 
         // otherwise, we can just return the result we previously calculated
         else
-            result = result_sum;
+            result = result_rounded;
 
     end
 

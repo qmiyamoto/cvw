@@ -58,7 +58,7 @@ module rounding(input logic  [1:0]  roundmode,
 
     logic overflow_fraction_rounded;
 
-    assign overflow = (exponent_sum1[5] & (exponent_sum1[4:0] == 5'b0));
+    assign overflow = (exponent_sum1[5] | (exponent_sum1[4:0] == 5'b11111));
 
 // changed logic!!
     assign overflow_fraction_rounded = fraction_rounded[11];
@@ -343,7 +343,6 @@ module rounding(input logic  [1:0]  roundmode,
                     special_case = 1'b0; end
             end
 
-            // FAILING FOR TWO CASES
             else if (guard_bit & (rounding_bit | sticky_bit2))
             begin
                 if (rne | rp)
@@ -370,7 +369,7 @@ module rounding(input logic  [1:0]  roundmode,
 
             // FIX THIS
             else
-                begin result_rounded = 16'b0111111111111111;
+                begin result_rounded = 16'b0111101111111111;
                 special_case = 1'b1; end
         end
 
@@ -444,7 +443,7 @@ module rounding(input logic  [1:0]  roundmode,
             
             // FIX THIS
             else
-                begin result_rounded = 16'b1111111111111111;
+                begin result_rounded = 16'b1111101111111111;
                 special_case = 1'b1; end
         end
 

@@ -198,27 +198,24 @@ module add(input logic  [15:0] x, y, z,
     // rounding logic
     rounding round(roundmode, sticky_bit, normalized_fraction_sum, exponent_sum, result_sum, result_rounded, special_case);
 
-
-    // probably change result_sum -> rounded_result below??
-
     
 
     logic [15:0] rz_result, else_result;
     // check for special cases and return the correct result accordingly
     special_case_determiner scd1(x, y, result_sum, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, rz_result);
-    special_case_determiner scd2(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, else_result);
+    // special_case_determiner scd2(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, else_result);
 
-    // special_case_determiner scd(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, result);
+    special_case_determiner scd(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, result);
 
 
-    always_comb
-    begin
-        if (roundmode == 2'b00)
-            result = rz_result;
+    // always_comb
+    // begin
+    //     if (roundmode == 2'b00)
+    //         result = rz_result;
 
-        else
-            result = else_result;
-    end
+    //     else
+    //         result = else_result;
+    // end
 
     // --------------------
 
