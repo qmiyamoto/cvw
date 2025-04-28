@@ -1,3 +1,12 @@
+///////////////////////////////////////////////
+// File: special_case_determiner.sv
+//
+// Written: Quinn Miyamoto, qmiyamoto@g.hmc.edu
+// Created: April 13, 2025
+//
+// Purpose: _______________
+///////////////////////////////////////////////
+
 module special_case_determiner(input logic  [15:0] x, y, result_rounded,
                                input logic         sign_x, sign_y, sign_z, sign_product,
                                input logic  [4:0]  exponent_x, exponent_y, exponent_z,

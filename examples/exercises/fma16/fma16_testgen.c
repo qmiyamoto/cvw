@@ -285,10 +285,10 @@ int main()
     genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rne", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RNE", 0b01, 1, 1, 1);
     
     softfloat_roundingMode = softfloat_round_min; 
-    genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rn", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RN", 0b11, 1, 1, 1);
+    genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rn", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RN", 0b10, 1, 1, 1);
     
     softfloat_roundingMode = softfloat_round_max; 
-    genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rp", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RP", 0b10, 1, 1, 1);
+    genspecialMATests(specialLiteExponents, specialLiteFracts, 1, "fma_special_rp", "// Adds and multiplies slightly more complicated combinations of numbers (including negative values), RP", 0b11, 1, 1, 1);
 
     return 0;
 }

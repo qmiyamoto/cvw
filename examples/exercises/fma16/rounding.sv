@@ -1,3 +1,12 @@
+///////////////////////////////////////////////
+// File: rounding.sv
+//
+// Written: Quinn Miyamoto, qmiyamoto@g.hmc.edu
+// Created: April 21, 2025
+//
+// Purpose: _______________
+///////////////////////////////////////////////
+
 module rounding(input logic   [1:0] roundmode,
                 input logic         abbreviated_sticky_bit,
                 input logic  [43:0] normalized_fraction_sum,
@@ -48,8 +57,8 @@ module rounding(input logic   [1:0] roundmode,
     // make it more easily apparent which rounding mode is being enabled
     assign rz = (roundmode == 2'b00);
     assign rne = (roundmode == 2'b01);
-    assign rp = (roundmode == 2'b10);
-    assign rn = (roundmode == 2'b11);
+    assign rp = (roundmode == 2'b11);
+    assign rn = (roundmode == 2'b10);
 
     // prepend a one to the fractional bits of sum
     // additionally, provide space for potential overflow
@@ -189,7 +198,7 @@ module rounding(input logic   [1:0] roundmode,
             else if (guard_bit & (rounding_bit | sticky_bit))
             begin
             // changes here?????
-                if ((rne & sticky_bit)  | rn)
+                if (rne  | rn)
                     result_rounded = rounded;
 
                 else

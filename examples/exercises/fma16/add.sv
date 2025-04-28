@@ -1,3 +1,12 @@
+///////////////////////////////////////////////
+// File: fma16.sv
+//
+// Written: Quinn Miyamoto, qmiyamoto@g.hmc.edu
+// Created: March 30, 2025
+//
+// Purpose: _______________
+///////////////////////////////////////////////
+
 module add(input logic  [15:0] x, y, z,
            input logic         mul, add, negp, negz, 
            input logic  [1:0]  roundmode,
@@ -25,7 +34,7 @@ module add(input logic  [15:0] x, y, z,
 
     logic invalid, overflow, underflow, inexact;
 
-    // --------------------
+   // --------------------------------------------
 
     // MULTIPLICATION LOGIC:
     // use bit swizzling to segment the half-precision floating point numbers accordingly
@@ -56,7 +65,7 @@ module add(input logic  [15:0] x, y, z,
     // determine the sign of the product, accounting for negatives
     assign sign_product = (sign_x ^ sign_y);
 
-    // --------------------
+    // --------------------------------------------
 
     // ADDITION LOGIC:
     // set the alignment shift amount
@@ -217,19 +226,19 @@ module add(input logic  [15:0] x, y, z,
     //         result = else_result;
     // end
 
-    // --------------------
+   // --------------------------------------------
 
     // ROUNDING LOGIC:
     // 
     
-    // --------------------
+   // --------------------------------------------
 
     // FLAG LOGIC:
     // determine which flags should be raised based on the above arithmetic
     // for the fmul_2.tv tests, we don't need to handle invalid numbers
     assign invalid = 1'b0;
     // if the intermediate exponent is greater than the maximum possible value of the resultant exponent, there's overflow    
-    assign overflow = (exponent_product > 7'd31);
+    assign overflow = (exponent_sum[5] | (exponent_sum[4:0] == 5'b11111));
     // if there is rounding or overflow, the product must be inexact
     assign inexact = (|prepended_product[9:0] | overflow);
     // for this project, we don't need to handle cases with underflow
