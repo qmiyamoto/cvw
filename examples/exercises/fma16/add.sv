@@ -4,43 +4,53 @@
 // Written: Quinn Miyamoto, qmiyamoto@g.hmc.edu
 // Created: March 30, 2025
 //
-// Purpose: _______________
+// Purpose: Fused Multiply and Add unit
 ///////////////////////////////////////////////
 
-module add(input logic  [15:0] x, y, z,
-           input logic         mul, add, negp, negz, 
-           input logic  [1:0]  roundmode,
-           output logic [15:0] result,
-           output logic [3:0]  flags);
+module add(input logic  [15:0] x, y, z,                 // 
+           input logic         mul, add, negp, negz,    // 
+           input logic  [1:0]  roundmode,               // 
+           output logic [15:0] result,                  // 
+           output logic [3:0]  flags                    // 
+          );
 
-    logic        sign_x, sign_y, sign_z, sign_product, sign_sum;
-    logic [4:0]  exponent_x, exponent_y, exponent_z;
-    logic [5:0]  exponent_sum;
-    logic [6:0]  exponent_product;
-    logic [9:0]  fraction_x, fraction_y, fraction_z, fraction_sum;
-    logic [10:0] prepended_x, prepended_y;
-    logic [21:0] prepended_product;
+    logic [15:0] new_y, new_z;
+
+    logic        sign_x, sign_y, sign_z, sign_product, sign_sum;      // 
+    logic [4:0]  exponent_x, exponent_y, exponent_z;                  // 
+    logic [5:0]  exponent_sum;                                        // 
+    logic [6:0]  exponent_product;                                    // 
+    logic [9:0]  fraction_x, fraction_y, fraction_z, fraction_sum;    // 
+    logic [10:0] prepended_x, prepended_y;                            // 
+    logic [21:0] prepended_product;                                   // 
     
-    logic        sign_addend, sticky_bit;
-    logic [6:0]  A_count;
-    logic [32:0] fraction_addend, fraction_killed_product;
-    logic [43:0] preshifted_z, shifted_z;
-    logic        kill_z, kill_product, invert_addend;
-    logic [33:0] inverted_fraction_addend, pre_sum, negative_pre_sum;
-    logic [43:0] pre_normalized_fraction_sum, normalized_fraction_sum;
-    logic        negative_sum;
-    logic [5:0]  leading_one, corrected_index;
-    logic [15:0] result_sum;
+    logic        sign_addend, sticky_bit;                                 // 
+    logic [6:0]  A_count;                                                 // 
+    logic [32:0] fraction_addend, fraction_killed_product;                // 
+    logic [43:0] preshifted_z, shifted_z;                                 // 
+    logic        kill_z, kill_product, invert_addend;                     // 
+    logic [33:0] inverted_fraction_addend, pre_sum, negative_pre_sum;     // 
+    logic [43:0] pre_normalized_fraction_sum, normalized_fraction_sum;    // 
+    logic        negative_sum;                                            // 
+    logic [5:0]  leading_one, corrected_index;                            // 
+    logic [15:0] result_sum;                                              // 
 
-    logic invalid, overflow, underflow, inexact;
+    logic invalid, overflow, underflow, inexact;    // flags
+
+   // --------------------------------------------
+
+    assign new_y = (mul) ? y : 16'h3C00;
+
+    assign new_z = (add) ? z : 16'b0;
+
 
    // --------------------------------------------
 
     // MULTIPLICATION LOGIC:
     // use bit swizzling to segment the half-precision floating point numbers accordingly
     assign {sign_x, exponent_x, fraction_x} = x;
-    assign {sign_y, exponent_y, fraction_y} = y;
-    assign {sign_z, exponent_z, fraction_z} = z;
+    assign {sign_y, exponent_y, fraction_y} = new_y;
+    assign {sign_z, exponent_z, fraction_z} = new_z;
 
     // prepend a one to both fraction bits of x and y
     assign prepended_x = {1'b1, fraction_x};
@@ -52,7 +62,7 @@ module add(input logic  [15:0] x, y, z,
     // compute the exponent of the product
     always_comb
     begin
-        if ((x == 16'b0) | (y == 16'b0))
+        if ((x[14:0] == 15'b0) |(new_y[14:0] == 15'b0))
             // keep the exponent at zero if either x or y has exponents equivalent to such
             exponent_product = 7'b0;
 
@@ -65,6 +75,10 @@ module add(input logic  [15:0] x, y, z,
     // determine the sign of the product, accounting for negatives
     assign sign_product = (sign_x ^ sign_y);
 
+
+    logic [15:0] result_product;
+    assign result_product = {sign_product, exponent_product[4:0], prepended_product[9:0]};
+
     // --------------------------------------------
 
     // ADDITION LOGIC:
@@ -73,7 +87,7 @@ module add(input logic  [15:0] x, y, z,
 
     // if z is too small to affect anything but the sticky bit, kill it
     // (in other words, assert kill_z if A_count > (3N_f + 3) or if z is zero)
-    assign kill_z = (($signed(A_count) > 33) | (z == 16'b0));
+    assign kill_z = (($signed(A_count) > 33) | (new_z[14:0] == 15'b0));
     
     // preshift the fraction bits of z so as to eradicate the need for (more complicated) bidirectional shifting
     // place z in the uppermost bits and prepend a one
@@ -81,7 +95,7 @@ module add(input logic  [15:0] x, y, z,
     
     // if the product is too small to affect anything but the sticky bit, kill it
     // (in other words, assert kill_product if A_count is negative, or if either x or y are zero)
-    assign kill_product = (($signed(A_count) < 0) | (x == 16'b0) | (y == 16'b0));
+    assign kill_product = (($signed(A_count) < 0) | (x[14:0] == 15'b0) | (new_y[14:0] == 15'b0));
 
     // perform a variable-alignment shift on z to the right
     always_comb
@@ -106,11 +120,11 @@ module add(input logic  [15:0] x, y, z,
     begin
         if (kill_product)
             // when killing the product, set the sticky bit if both x and y are not zero
-            sticky_bit = ~((x == 16'b0) | (y == 16'b0));
+            sticky_bit = ~((x[14:0] == 15'b0) | (new_y[14:0] == 15'b0));
         
         else if (kill_z)
             // when killing z, set the sticky bit if z is not zero
-            sticky_bit = ~(z == 16'b0);
+            sticky_bit = ~(new_z[14:0] == 15'b0);
         
         else
             // otherwise, set the sticky bit if any the fraction bits of z are nonzero
@@ -155,9 +169,6 @@ module add(input logic  [15:0] x, y, z,
 
     // the result of subtracting the addend from the product is negative
     assign negative_sum = pre_sum[33];
-
-    // determine the sign of the final sum, accounting for negatives
-    assign sign_sum = (sign_product ^ negative_sum);
     
     // determine the magnitude of the fraction bits of the sum
     always_comb
@@ -177,7 +188,8 @@ module add(input logic  [15:0] x, y, z,
     priority_encoder prior_enc(pre_normalized_fraction_sum, leading_one);
 
     // note that the priority encoder counts from right to left, so there must be some correction
-    assign corrected_index = 6'd20 - leading_one;
+    assign corrected_index = (|leading_one) ? (6'd20 - leading_one) : exponent_product;
+    // CHANGED: assign corrected_index = 6'd20 - leading_one;
 
     // calculate the exponent of the sum before normalization
     // if killing the product, the exponent of the sum is equal to that of z
@@ -193,7 +205,20 @@ module add(input logic  [15:0] x, y, z,
 
     // select the desired bits of the now-normalized sum to get the finalized components of the sum fraction
     // (acquiring said desired bits involves ignoring the first N_f + 2 and last 2N_f + 1 bits)
+    
+    // always_comb
+    // begin
+    //     if (kill_product)
+    //         fraction_sum = fraction_z;
+            
+    //     else
+    //         fraction_sum = normalized_fraction_sum[31:22];
+    // end
+
     assign fraction_sum = normalized_fraction_sum[31:22];
+
+    // determine the sign of the final sum, accounting for negatives
+    assign sign_sum = (|leading_one) ? (sign_product ^ negative_sum) : 1'b0;
 
     // assemble the overall result of both the multiplication and addition
     assign result_sum = {sign_sum, exponent_sum[4:0], fraction_sum};
@@ -211,10 +236,10 @@ module add(input logic  [15:0] x, y, z,
     logic [15:0] rz_result;
 
     // check for special cases and return the correct result accordingly
-    special_case_determiner scd1(x, y, result_sum, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, rz_result);
+    special_case_determiner scd1(x, new_y, new_z, result_sum, result_product, result_sum, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, exponent_sum, fraction_x, fraction_y, fraction_z, kill_z, kill_product, rz_result);
     // special_case_determiner scd2(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, else_result);
 
-    special_case_determiner scd(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, result);
+    special_case_determiner scd(x, new_y, new_z, result_sum, result_product, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, exponent_sum, fraction_x, fraction_y, fraction_z, kill_z, kill_product, result);
 
 
     // always_comb
