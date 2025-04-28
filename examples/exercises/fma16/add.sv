@@ -193,10 +193,9 @@ module add(input logic  [15:0] x, y, z,
 
 
     logic [15:0] result_rounded;
-    logic special_case;
 
     // rounding logic
-    rounding round(roundmode, sticky_bit, normalized_fraction_sum, exponent_sum, result_sum, result_rounded, special_case);
+    rounding round(roundmode, sticky_bit, normalized_fraction_sum, exponent_sum, result_sum, result_rounded);
 
     
 

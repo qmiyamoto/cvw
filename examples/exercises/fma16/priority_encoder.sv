@@ -1,5 +1,5 @@
-module priority_encoder(input logic [43:0] pre_normalized_fraction_sum,
-                        output logic [5:0] leading_one);
+module priority_encoder(input logic  [43:0] pre_normalized_fraction_sum,
+                        output logic [5:0]  leading_one);
 
     integer i;
 
