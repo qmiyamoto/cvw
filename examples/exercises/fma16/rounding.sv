@@ -80,14 +80,17 @@ module rounding(input logic   [1:0] roundmode,
     // note that this is the default output of the FMA
     assign truncated = result_sum;
 
-    // 
+    // select what to return, depending on the current rounding mode
     always_comb
     begin
+        // Sign = 0, Overflow = 0
         if ((sign_sum == 1'b0) & (overflow == 1'b0))
         begin
+            // L = X, G = 0, R | T = 0
             if ((guard_bit == 1'b0) & ((rounding_bit | sticky_bit) == 1'b0))
                 result_rounded = truncated;
 
+            // L = X, G = 0, R | T = 1
             else if ((guard_bit == 1'b0) & (rounding_bit | sticky_bit))
             begin
                 if (rp)
@@ -97,9 +100,9 @@ module rounding(input logic   [1:0] roundmode,
                     result_rounded = truncated;
             end
 
+            // L = 0, G = 1, R | T = 0
             else if ((least_significant_bit == 1'b0) & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
             begin
-                // does this actually work????
                 if (rp)
                     result_rounded = rounded;
 
@@ -107,6 +110,7 @@ module rounding(input logic   [1:0] roundmode,
                     result_rounded = truncated;
             end
             
+            // L = 1, G = 1, R | T = 0
             else if (least_significant_bit & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
             begin
                 if (rne | rp)
@@ -116,6 +120,7 @@ module rounding(input logic   [1:0] roundmode,
                     result_rounded = truncated;
             end
 
+            // L = X, G = 1, R | T = 1
             else if (guard_bit & (rounding_bit | sticky_bit))
             begin
                 if (rne | rp)
@@ -125,24 +130,31 @@ module rounding(input logic   [1:0] roundmode,
                     result_rounded = truncated;
             end
 
+            // default case
             else
                 result_rounded = truncated;
         end
 
+        // Sign = 0, Overflow = 1
         else if ((sign_sum == 1'b0) & overflow)
         begin
             if (rne | rp)
+                // positive infinity
                 result_rounded = 16'b0111110000000000;
 
             else
+                // positive maximum number
                 result_rounded = 16'b0111101111111111;
         end
 
+        // Sign = 1, Overflow = 0
         else if (sign_sum & (overflow == 1'b0))
         begin
+            // L = X, G = 0, R | T = 0
             if ((guard_bit == 1'b0) & ((rounding_bit | sticky_bit) == 1'b0))
                 result_rounded = truncated;
 
+            // L = X, G = 0, R | T = 1
             else if ((guard_bit == 1'b0) & (rounding_bit | sticky_bit))
             begin
                 if (rn)
@@ -151,10 +163,9 @@ module rounding(input logic   [1:0] roundmode,
                 else
                     result_rounded = truncated;
             end
-
+            
+            // L = 0, G = `1, R | T = 0
             else if ((least_significant_bit == 1'b0) & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
-
-            // why does this work now?????
             begin
                 // if ((rne & sticky_bit) | rn)
                 if (rn) // rne | rn
@@ -164,6 +175,7 @@ module rounding(input logic   [1:0] roundmode,
                     result_rounded = truncated;
             end
 
+            // L = 1, G = 1, R | T = 0
             else if (least_significant_bit & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
             begin
                 if (rne | rn)
@@ -173,11 +185,10 @@ module rounding(input logic   [1:0] roundmode,
                     result_rounded = truncated;
             end
 
+            // L = X, G = 1, R | T = 1
             else if (guard_bit & (rounding_bit | sticky_bit))
             begin
-
             // changes here?????
-
                 if ((rne & sticky_bit)  | rn)
                     result_rounded = rounded;
 
@@ -185,21 +196,24 @@ module rounding(input logic   [1:0] roundmode,
                     result_rounded = truncated;
             end
 
+            // default case
             else
                 result_rounded = truncated;
         end
 
+        // Sign = 1, Overflow = 1
         else if (sign_sum & overflow)
         begin
             if (rne | rn)
+                // negative infinity
                 result_rounded = 16'b1111110000000000;
-                // result_rounded = rounded;
             
-            // FIX THIS
             else
+                // negative maximum number
                 result_rounded = 16'b1111101111111111;
         end
 
+        // default case
         else
             result_rounded = truncated;
     end
