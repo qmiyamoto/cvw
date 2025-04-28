@@ -4,13 +4,13 @@
   "markerTime": 11,
   "altMarkerTime": null,
   "selectedSignal": {
-    "name": "testbench_fma16.dut.ad.round.overflow",
+    "name": "testbench_fma16.dut.ad.round.sticky_bit",
     "numberFormat": "hexadecimal",
     "msb": -1,
     "lsb": -1
   },
-  "zoomRatio": 97.9568345323741,
-  "scrollLeft": 799.6546762589928,
+  "zoomRatio": 6.596899224806202,
+  "scrollLeft": 0,
   "displayedSignals": [
     {
       "netlistId": 133,
@@ -279,14 +279,14 @@
       "renderType": "binary"
     },
     {
-      "netlistId": 308,
+      "netlistId": 303,
       "name": "testbench_fma16.dut.ad.round.exponent_rounded",
       "numberFormat": "hexadecimal",
       "colorIndex": 0,
       "renderType": "multiBit"
     },
     {
-      "netlistId": 411,
+      "netlistId": 406,
       "name": "testbench_fma16.dut.ad.scd1.result",
       "numberFormat": "hexadecimal",
       "colorIndex": 0,
@@ -307,77 +307,70 @@
       "renderType": "multiBit"
     },
     {
-      "netlistId": 171,
-      "name": "testbench_fma16.dut.ad.special_case",
-      "numberFormat": "binary",
-      "colorIndex": 0,
-      "renderType": "binary"
-    },
-    {
-      "netlistId": 221,
+      "netlistId": 219,
       "name": "testbench_fma16.dut.ad.round.roundmode",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 220,
+      "netlistId": 219,
       "name": "testbench_fma16.dut.ad.round.roundmode",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 302,
-      "name": "testbench_fma16.dut.ad.round.sticky_bit2",
-      "numberFormat": "binary",
-      "colorIndex": 0,
-      "renderType": "binary"
-    },
-    {
-      "netlistId": 301,
-      "name": "testbench_fma16.dut.ad.round.rounding_bit",
-      "numberFormat": "binary",
-      "colorIndex": 0,
-      "renderType": "binary"
-    },
-    {
-      "netlistId": 300,
-      "name": "testbench_fma16.dut.ad.round.guard_bit",
-      "numberFormat": "binary",
-      "colorIndex": 0,
-      "renderType": "binary"
-    },
-    {
-      "netlistId": 299,
-      "name": "testbench_fma16.dut.ad.round.least_significant_bit",
-      "numberFormat": "binary",
-      "colorIndex": 0,
-      "renderType": "binary"
-    },
-    {
-      "netlistId": 291,
+      "netlistId": 293,
       "name": "testbench_fma16.dut.ad.round.overflow",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "binary"
     },
     {
-      "netlistId": 307,
+      "netlistId": 294,
+      "name": "testbench_fma16.dut.ad.round.least_significant_bit",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "binary"
+    },
+    {
+      "netlistId": 295,
+      "name": "testbench_fma16.dut.ad.round.guard_bit",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "binary"
+    },
+    {
+      "netlistId": 296,
+      "name": "testbench_fma16.dut.ad.round.rounding_bit",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "binary"
+    },
+    {
+      "netlistId": 292,
+      "name": "testbench_fma16.dut.ad.round.sticky_bit",
+      "numberFormat": "binary",
+      "colorIndex": 0,
+      "renderType": "binary"
+    },
+    {
+      "netlistId": 302,
       "name": "testbench_fma16.dut.ad.round.fraction_rounded",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "multiBit"
     },
     {
-      "netlistId": 303,
+      "netlistId": 306,
       "name": "testbench_fma16.dut.ad.round.truncated",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "multiBit"
     },
     {
-      "netlistId": 304,
+      "netlistId": 307,
       "name": "testbench_fma16.dut.ad.round.rounded",
       "numberFormat": "binary",
       "colorIndex": 0,
@@ -398,15 +391,8 @@
       "renderType": "multiBit"
     },
     {
-      "netlistId": 172,
+      "netlistId": 171,
       "name": "testbench_fma16.dut.ad.rz_result",
-      "numberFormat": "binary",
-      "colorIndex": 0,
-      "renderType": "multiBit"
-    },
-    {
-      "netlistId": 173,
-      "name": "testbench_fma16.dut.ad.else_result",
       "numberFormat": "binary",
       "colorIndex": 0,
       "renderType": "multiBit"
