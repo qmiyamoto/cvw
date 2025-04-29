@@ -7,7 +7,7 @@
 // Purpose: Handle FMA operations with special cases
 ///////////////////////////////////////////////
 
-module special_case_determiner(input logic  [15:0] x, y, z, result_product, result_sum,     // original inputs to the FMA unit, and the intermediate product and sum
+module special_case_determiner(input logic  [15:0] x, y, z,                                 // original inputs to the FMA unit
                                input logic  [15:0] result_rounded,                          // intermediate result after accounting for rounding
                                input logic         sign_x, sign_y, sign_z, sign_product,    // signs of the original inputs, and the intermediate product
                                input logic  [4:0]  exponent_x, exponent_y, exponent_z,      // exponential bits of the original inputs
@@ -22,10 +22,7 @@ module special_case_determiner(input logic  [15:0] x, y, z, result_product, resu
           positive_infinity_x, positive_infinity_y, positive_infinity_z, positive_infinity_product,     // signals for the presence of positive infinity
           negative_infinity_x, negative_infinity_y, negative_infinity_z, negative_infinity_product;     // signals for the presence of negative infinity
 
-    logic overflow;     // 
-
-    logic maximum_number_x, maximum_number_z, maximum_number_y,                                // 
-          negative_maximum_number_x, negative_maximum_number_y, negative_maximum_number_z;     //  
+    logic overflow;     // signal for the presence of overflow
 
     // determine whether x, y, and z are nan or not
     assign nan_x = ((exponent_x == 5'd31) & (|fraction_x));
@@ -39,16 +36,6 @@ module special_case_determiner(input logic  [15:0] x, y, z, result_product, resu
 
     // detect overflow when the MSB of the exponent is one, or when its lower bits are all one
     assign overflow = (exponent_sum[5] | (exponent_sum[4:0] == 5'b11111));
-
-    // determine whether x, y, and z are already storing the maximum possible number or not
-    assign maximum_number_x = (x == 16'b0111101111111111);
-    assign maximum_number_y = (y == 16'b0111101111111111);
-    assign maximum_number_z = (z == 16'b0111101111111111);
-
-    // determine whether x, y, and z are already storing the most negative possible number or not
-    assign negative_maximum_number_x = (x == 16'b1111101111111111);
-    assign negative_maximum_number_y = (y == 16'b1111101111111111);
-    assign negative_maximum_number_z = (z == 16'b1111101111111111);
 
     // determine whether x, y, and z are positive infinity or not
     assign positive_infinity_x = ((sign_x == 1'b0) & (exponent_x == 5'd31) & (fraction_x == 10'b0));
@@ -91,102 +78,123 @@ module special_case_determiner(input logic  [15:0] x, y, z, result_product, resu
                  (negative_infinity_product & (positive_infinity_z == 1'b0)))
             result = 16'b1111110000000000;
 
-        // +0 * -0 = +0
+        // if we multiply two zeros together, the output changes depending on their signs (as well as the sign of z)
         else if (zero_x & zero_y)
         begin
-            // positive zero multiplied by negative zero
+            // case: (+0 * -0)
             if (((sign_x == 1'b0) & sign_y) | (sign_x & (sign_y == 1'b0)))
             begin
+                // case: ((+0 * -0) + -0) = -0
                 if (zero_z & sign_z)
                     result = 16'b1000000000000000;
 
+                // case: ((+0 * -0) + +0) = +0
                 else if (zero_z & (sign_z == 1'b0))
                     result = 16'b0000000000000000;
 
+                // default: ((+0 * -0) + z) = z
                 else
                     result = z;
             end
 
-            // negative zero multiplied by negative zero
+            // case: (-0 * -0)
             else if (sign_x & sign_y)
             begin
+                // case: ((-0 * -0) + 0) = +0
                 if (zero_z)
                     result = 16'b0000000000000000;
 
+                // default: ((+0 * -0) + z) = z
                 else
                     result = z;
             end
 
-            // positive zero multiplied by positive zero
+            // case: (+0 * +0)
             else if ((sign_x == 1'b0) & (sign_y == 1'b0))
             begin
+                // case: ((+0 * +0) + 0) = +0
                 if (zero_z)
                     result = 16'b0000000000000000;
                 
+                // default: ((+0 * +0) + z) = z
                 else
                     result = z;
             end
 
+            // default: return the result garnered from rounding
             else
                 result = result_rounded;
         end
 
-        // multiplying by one negative zero
+        // if we are multiplying by at least one negative zero, the output changes depending on the situations below
         else if ((zero_x & sign_x) | (zero_y & sign_y))
         begin
-            // adding to negative zero
+            // case: ((x * -0) + -0), or ((-0 * y) + -0)
             if (zero_z & sign_z)
             begin
-                // if the product is negative,
+                // case: (-(x * -0) + -0) = -0, or (-(-0 * y) + -0) = -0
                 if (sign_product)
                     result = 16'b1000000000000000;
                     
+                // default: ((x * -0) + -0) = +0, or ((-0 * y) + -0) = +0
                 else
                     result = 16'b0000000000000000;
             end
 
+            // case: ((x * -0) + +0) = +0, or ((-0 * y) + +0) = +0
             else if (zero_z & (sign_z == 1'b0))
                 result = 16'b0000000000000000;
 
+            // default: (x * -0) + z) = z, or ((-0 * y) + z) = z
             else
                 result = z;
         end
 
-        // multiplying by positive zero
+        // if we are multiplying by at least one positive zero, the output changes depending on the situations below
         else if ((zero_x & (sign_x == 1'b0)) | (zero_y & (sign_y == 1'b0)))
         begin
             // adding to negative zero
+            // case: ((x * +0) + -0), or ((+0 * y) + -0)
             if (zero_z & sign_z)
             begin
-                // if the product is negative,
+                // case: (-(x * +0) + -0) = -0, or (-(+0 * y) + -0) = -0
                 if (sign_product)
                     result = 16'b1000000000000000;
                     
+                // default: ((x * +0) + -0) = +0, or ((+0 * y) + -0) = +0
                 else
                     result = 16'b0000000000000000;
             end
 
+            // case: ((x * +0) + +0) = +0, or ((+0 * y) + +0) = +0
             else if (zero_z & (sign_z == 1'b0))
                 result = 16'b0000000000000000;
 
+            // default: ((x * +0) + z) = z, or ((+0 * y) + z) = z
             else
                 result = z;
         end
 
+        // if we are both killing z and the product, the output is zero (of some sort)
         else if (kill_z & kill_product)
         begin
-            if (~sign_product & sign_z)
+            // if the product is positive and z is negative, the output is positive zero
+            if ((sign_product == 1'b0) & sign_z)
                 result = 16'b0000000000000000;
 
+            // if both the product and z are negative, the output is negative zero
             else if (sign_product & sign_z)
                 result = 16'b1000000000000000;
 
-            else if (~sign_product & ~sign_z)
+            // if both the product and z are positive, the output is positive zero
+            else if ((sign_product == 1'b0) & (sign_z == 1'b0))
                 result = 16'b0000000000000000;
 
-            else if (sign_product & ~sign_z)
+            // if the product is negative and z is positive, the output is negative zero
+            else if (sign_product & (sign_z == 1'b0))
                 result = 16'b1000000000000000;
 
+            // otherwise, return the result garnered from rounding
             else
                 result = result_rounded;
         end

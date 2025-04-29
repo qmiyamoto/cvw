@@ -236,10 +236,7 @@ module add(input logic  [15:0] x, y, z,                 //
     logic [15:0] rz_result;
 
     // check for special cases and return the correct result accordingly
-    special_case_determiner scd1(x, new_y, new_z, result_sum, result_product, result_sum, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, exponent_sum, fraction_x, fraction_y, fraction_z, kill_z, kill_product, rz_result);
-    // special_case_determiner scd2(x, y, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, fraction_x, fraction_y, fraction_z, else_result);
-
-    special_case_determiner scd(x, new_y, new_z, result_sum, result_product, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, exponent_sum, fraction_x, fraction_y, fraction_z, kill_z, kill_product, result);
+    special_case_determiner scd(x, new_y, new_z, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, exponent_sum, fraction_x, fraction_y, fraction_z, kill_z, kill_product, result);
 
 
     // always_comb
