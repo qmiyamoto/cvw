@@ -24,8 +24,8 @@ module testbench_fma16;
       $dumpfile("fma16.vcd");
       $dumpvars(0, testbench_fma16);
 
-      // $readmemh("tests/baby_torture.tv", testvectors);
-      $readmemh("work/fma_0.tv", testvectors);
+      //$readmemh("tests/baby_torture.tv", testvectors);
+      $readmemh("work/fma_special_rz.tv", testvectors);
       vectornum = 0; errors = 0;
       reset = 1; #22; reset = 0;
     end
@@ -40,7 +40,7 @@ module testbench_fma16;
   // check results on falling edge of clk
   always @(negedge clk)
     if (~reset) begin // skip during reset
-      if (result !== rexpected /* | flags !== flagsexpected */) begin  // check result
+      if (result !== rexpected | flags !== flagsexpected) begin  // check result
         $display("Error: inputs %h * %h + %h", x, y, z);
         $display("  result = %h (%h expected) flags = %b (%b expected)", 
           result, rexpected, flags, flagsexpected);

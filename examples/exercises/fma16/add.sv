@@ -75,10 +75,6 @@ module add(input logic  [15:0] x, y, z,                 //
     // determine the sign of the product, accounting for negatives
     assign sign_product = (sign_x ^ sign_y);
 
-
-    logic [15:0] result_product;
-    assign result_product = {sign_product, exponent_product[4:0], prepended_product[9:0]};
-
     // --------------------------------------------
 
     // ADDITION LOGIC:
@@ -218,7 +214,19 @@ module add(input logic  [15:0] x, y, z,                 //
     assign fraction_sum = normalized_fraction_sum[31:22];
 
     // determine the sign of the final sum, accounting for negatives
-    assign sign_sum = (|leading_one) ? (sign_product ^ negative_sum) : 1'b0;
+    always_comb
+    begin
+        if (|leading_one)
+            sign_sum = (sign_product ^ negative_sum);
+            
+        else if (roundmode == 2'b10)
+            sign_sum = 1'b1;
+
+        else
+            sign_sum = 1'b0;
+    end
+
+    // assign sign_sum = (|leading_one) ? (sign_product ^ negative_sum) : 1'b0;
 
     // assemble the overall result of both the multiplication and addition
     assign result_sum = {sign_sum, exponent_sum[4:0], fraction_sum};
@@ -229,44 +237,31 @@ module add(input logic  [15:0] x, y, z,                 //
     logic [15:0] result_rounded;
 
     // rounding logic
-    rounding round(roundmode, sticky_bit, normalized_fraction_sum, exponent_sum, result_sum, result_rounded);
+    rounding round(roundmode, A_count, kill_product, sign_z, sign_product, fraction_z, prepended_product, sticky_bit, normalized_fraction_sum, exponent_sum, result_sum, result_rounded, overflow, inexact);
 
     
 
     logic [15:0] rz_result;
+    logic special_case;
 
     // check for special cases and return the correct result accordingly
-    special_case_determiner scd(x, new_y, new_z, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, exponent_sum, fraction_x, fraction_y, fraction_z, kill_z, kill_product, result);
-
-
-    // always_comb
-    // begin
-    //     if (roundmode == 2'b00)
-    //         result = rz_result;
-
-    //     else
-    //         result = else_result;
-    // end
-
-   // --------------------------------------------
-
-    // ROUNDING LOGIC:
-    // 
+    special_case_determiner scd(x, new_y, new_z, roundmode, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, exponent_sum, fraction_x, fraction_y, fraction_z, kill_z, kill_product, result, invalid, special_case);
     
    // --------------------------------------------
 
     // FLAG LOGIC:
     // determine which flags should be raised based on the above arithmetic
-    // for the fmul_2.tv tests, we don't need to handle invalid numbers
-    assign invalid = 1'b0;
+    // 
+    // assign invalid = 1'b0;
     // if the intermediate exponent is greater than the maximum possible value of the resultant exponent, there's overflow    
-    assign overflow = (exponent_sum[5] | (exponent_sum[4:0] == 5'b11111));
+    // assign overflow = (exponent_sum[5] | (exponent_sum[4:0] == 5'b11111));
     // if there is rounding or overflow, the product must be inexact
-    assign inexact = (|prepended_product[9:0] | overflow);
+    // assign inexact = (|prepended_product[9:0] | overflow);
+    
     // for this project, we don't need to handle cases with underflow
     assign underflow = 1'b0;
 
     // return the flags accordingly (in the order of NV, OF, UF, NX)
-    assign flags = {invalid, overflow, underflow, inexact};
+    assign flags = {invalid, (overflow & ~invalid & ~special_case), (underflow & ~invalid), (inexact & ~invalid & ~special_case)};
 
 endmodule
