@@ -188,7 +188,7 @@ module add(input logic  [15:0] x, y, z,                 //
     priority_encoder prior_enc(pre_normalized_fraction_sum, leading_one);
 
     // note that the priority encoder counts from right to left, so there must be some correction
-    assign corrected_index = (|leading_one) ? (6'd20 - leading_one) : exponent_product;
+    assign corrected_index = (|leading_one) ? (6'd20 - leading_one) : exponent_product[5:0];
     // CHANGED: assign corrected_index = 6'd20 - leading_one;
 
     // calculate the exponent of the sum before normalization
