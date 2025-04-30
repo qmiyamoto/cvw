@@ -322,7 +322,7 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
     end
 
     // set the overflow flag when ~~~
-    assign overflow = ((original_exponent_sum > 6'd30) | (overflow_fraction_rounded & (result_rounded[14:10] > 6'd30)));
+    assign overflow = ((original_exponent_sum > 6'd30) | (overflow_fraction_rounded & (result_rounded[14:10] > 5'd30)));
 
     // set the inexact flag when ~~~
     assign inexact = (rounding_bit | guard_bit | sticky_bit | overflow);
