@@ -244,10 +244,10 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
             result_rounded = truncated;
     end
 
-    // set the overflow flag when ~~~
+    // set the overflow flag when either the original sum's exponent or the rounded exponent are greater than 30
     assign overflow = ((original_exponent_sum > 6'd30) | (overflow_fraction_rounded & (result_rounded[14:10] > 5'd30)));
 
-    // set the inexact flag when ~~~
+    // set the inexact flag when either R, G, T, or overflow are set
     assign inexact = (rounding_bit | guard_bit | sticky_bit | overflow);
    
 endmodule
