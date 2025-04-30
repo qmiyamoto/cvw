@@ -7,11 +7,11 @@
 // Purpose: Fused Multiply and Add unit
 ///////////////////////////////////////////////
 
-module fma16(input logic  [15:0] x, y, z,               // given inputs to perform computations with
-           input logic         mul, add, negp, negz,    // signals to enable multiplication, enable addition, negate the product, and negate z
-           input logic  [1:0]  roundmode,               // rounding mode setter
-           output logic [15:0] result,                  // final output, accounting for post-processing
-           output logic [3:0]  flags                    // flags for potential inaccuracy
+module fma16(input logic  [15:0] x, y, z,                 // given inputs to perform computations with
+             input logic         mul, add, negp, negz,    // signals to enable multiplication, enable addition, negate the product, and negate z
+             input logic  [1:0]  roundmode,               // rounding mode setter
+             output logic [15:0] result,                  // final output, accounting for post-processing
+             output logic [3:0]  flags                    // flags for potential inaccuracy
           );
 
     logic [15:0] new_y, new_z;    // y and z, after accounting for the enabling of mul and add
