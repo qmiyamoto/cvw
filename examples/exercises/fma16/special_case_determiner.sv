@@ -64,9 +64,9 @@ module special_case_determiner(input logic  [15:0] x, y, z,                     
     assign negative_infinity_product = (sign_product & (positive_infinity_x | positive_infinity_y | negative_infinity_x | negative_infinity_y));
 
     // set the invalid flag when at least one of the following is true...
-    assign invalid = ((((zero_x & (positive_infinity_y | negative_infinity_y)) | (zero_y & (positive_infinity_x | negative_infinity_x))) |    // (x * y) = (zero * infinity)
-                       ((positive_infinity_product & negative_infinity_z) | (negative_infinity_product & positive_infinity_z))) |             // ((x * y) - z) = (infinity - infinity)
-                        (signaling_nan_x | signaling_nan_y | signaling_nan_z)) ?                                                              // any of the inputs are snans
+    assign invalid = (((zero_x & (positive_infinity_y | negative_infinity_y)) | (zero_y & (positive_infinity_x | negative_infinity_x))) |               // (x * y) = (zero * infinity)
+                     (((positive_infinity_product & negative_infinity_z) | (negative_infinity_product & positive_infinity_z)) & (~nan_x & ~nan_y)) |    // ((x * y) - z) = (infinity - infinity)
+                       (signaling_nan_x | signaling_nan_y | signaling_nan_z)) ?                                                                         // any of the inputs are snans
                      1'b1 : 1'b0;
 
     // signify whether the rounding mode is rn or not
