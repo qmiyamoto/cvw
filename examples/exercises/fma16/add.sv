@@ -7,44 +7,55 @@
 // Purpose: Fused Multiply and Add unit
 ///////////////////////////////////////////////
 
-module add(input logic  [15:0] x, y, z,                 // 
-           input logic         mul, add, negp, negz,    // 
-           input logic  [1:0]  roundmode,               // 
-           output logic [15:0] result,                  // 
-           output logic [3:0]  flags                    // 
+module add(input logic  [15:0] x, y, z,                 // given inputs to perform computations with
+           input logic         mul, add, negp, negz,    // signals to enable multiplication, enable addition, negate the product, and negate z
+           input logic  [1:0]  roundmode,               // rounding mode setter
+           output logic [15:0] result,                  // final output, accounting for post-processing
+           output logic [3:0]  flags                    // flags for potential inaccuracy
           );
 
-    logic [15:0] new_y, new_z;
+    logic [15:0] new_y, new_z;    // y and z, after accounting for the enabling of mul and add
 
-    logic        sign_x, sign_y, sign_z, sign_product, sign_sum;      // 
-    logic [4:0]  exponent_x, exponent_y, exponent_z;                  // 
-    logic [5:0]  exponent_sum;                                        // 
-    logic [6:0]  exponent_product;                                    // 
-    logic [9:0]  fraction_x, fraction_y, fraction_z, fraction_sum;    // 
-    logic [10:0] prepended_x, prepended_y;                            // 
-    logic [21:0] prepended_product;                                   // 
+    logic        sign_x, sign_y, sign_z, sign_product, sign_sum;      // signs of x, y, z, the intermediate product, and the intermediate sum
+    logic [4:0]  exponent_x, exponent_y, exponent_z;                  // exponential bits of x, y, and z
+    logic [5:0]  exponent_sum;                                        // expanded exponential bits of the intermediate sum, accounting for overflow
+    logic [6:0]  exponent_product;                                    // expanded exponential bits of the intermediate product, accounting for overflow
+    logic [9:0]  fraction_x, fraction_y, fraction_z, fraction_sum;    // fractional bits of x, y, z, and the intermediate sum
+    logic [10:0] prepended_x, prepended_y;                            // expanded fractional bits of x and y, with prepended ones
+    logic [21:0] prepended_product;                                   // fractional bits of the intermediate product, as calculated with prepended x and y
     
-    logic        sign_addend, sticky_bit;                                 // 
-    logic [6:0]  A_count;                                                 // 
-    logic [32:0] fraction_addend, fraction_killed_product;                // 
-    logic [43:0] preshifted_z, shifted_z;                                 // 
-    logic        kill_z, kill_product, invert_addend;                     // 
-    logic [33:0] inverted_fraction_addend, pre_sum, negative_pre_sum;     // 
-    logic [43:0] pre_normalized_fraction_sum, normalized_fraction_sum;    // 
-    logic        negative_sum;                                            // 
-    logic [5:0]  leading_one, corrected_index;                            // 
-    logic [15:0] result_sum;                                              // 
+    logic        sign_addend;                                             // sign of the addend after properly aligning z
+    logic        sticky_bit;                                              // sticky bit calculated with abbreviated logic
+    logic [6:0]  A_count;                                                 // alignment shift amount
+    logic [32:0] fraction_addend;                                         // fractional bits of the properly aligned addend
+    logic [32:0] fraction_killed_product;                                 // fractional bits of the product, after determining whether or not to kill it
+    logic [43:0] preshifted_z, shifted_z;                                 // fractional bits of z, pre- and post-shifting for alignment
+    logic        kill_z, kill_product, invert_addend;                     // signals to kill z, kill the product, and invert the addend
+    logic [33:0] inverted_fraction_addend;                                // inverted fractional bits of the addend
+    logic [33:0] pre_sum, negative_pre_sum;                               // outputs of the two adders, (product + addend) and (addend - product)
+    logic [43:0] pre_normalized_fraction_sum, normalized_fraction_sum;    // fractional bits of the sum, pre- and post-normalization
+    logic        negative_sum;                                            // signal that the result of subtracting the addend from the product is negative
+    logic [5:0]  leading_one;                                             // location of the leading one in the pre-normalized sum
+    logic [5:0]  corrected_index;                                         // corrected location of the leading one, after accounting for reading direction
+    logic [15:0] result_sum;                                              // final result of addition, before accounting for post-processing
 
-    logic invalid, overflow, underflow, inexact;    // flags
+    logic [15:0] result_rounded;    // result after accounting for rounding
+    logic        special_case;      // signal that the FMA output has been replaced with a special case
 
-   // --------------------------------------------
+    logic invalid, overflow, underflow, inexact;    // specific flags for invalid, overflowed, underflowed, and inexact results
 
+    // --------------------------------------------
+    
+    // MUL/ADD LOGIC:
+    // if mul is asserted, use the given input for y
+    // otherwise, set y equal to one
     assign new_y = (mul) ? y : 16'h3C00;
 
+    // if add is asserted, use the given input for z
+    // otheriwse, set z equal to zero
     assign new_z = (add) ? z : 16'b0;
 
-
-   // --------------------------------------------
+    // --------------------------------------------
 
     // MULTIPLICATION LOGIC:
     // use bit swizzling to segment the half-precision floating point numbers accordingly
@@ -125,7 +136,6 @@ module add(input logic  [15:0] x, y, z,                 //
         else
             // otherwise, set the sticky bit if any the fraction bits of z are nonzero
             sticky_bit = |(shifted_z[10:0]);
-            // CHANGED: sticky_bit = |(shifted_z[9:0]);
     end
 
     // align z to create a proper addend
@@ -157,7 +167,6 @@ module add(input logic  [15:0] x, y, z,                 //
     // optimize addition and subtraction with the use of two adders
     // perform addition or subtraction between the addend and product, with correction for a negative (addend) sticky bit
     // (first adder)
-    // CHANGED: assign pre_sum = ({1'b0, fraction_killed_product} + inverted_fraction_addend + {33'b0, ((~sticky_bit | kill_product) & invert_addend)});
     assign pre_sum = ({fraction_killed_product[32], fraction_killed_product} + inverted_fraction_addend + {33'b0, ((~sticky_bit | kill_product) & invert_addend)});
     // subtract the product from the addend, with correction for a negative (product) sticky bit
     // (second adder)
@@ -185,7 +194,6 @@ module add(input logic  [15:0] x, y, z,                 //
 
     // note that the priority encoder counts from right to left, so there must be some correction
     assign corrected_index = (|leading_one) ? (6'd20 - leading_one) : exponent_product[5:0];
-    // CHANGED: assign corrected_index = 6'd20 - leading_one;
 
     // calculate the exponent of the sum before normalization
     // if killing the product, the exponent of the sum is equal to that of z
@@ -201,63 +209,40 @@ module add(input logic  [15:0] x, y, z,                 //
 
     // select the desired bits of the now-normalized sum to get the finalized components of the sum fraction
     // (acquiring said desired bits involves ignoring the first N_f + 2 and last 2N_f + 1 bits)
-    
-    // always_comb
-    // begin
-    //     if (kill_product)
-    //         fraction_sum = fraction_z;
-            
-    //     else
-    //         fraction_sum = normalized_fraction_sum[31:22];
-    // end
-
     assign fraction_sum = normalized_fraction_sum[31:22];
 
-    // determine the sign of the final sum, accounting for negatives
+    // determine the sign of the final sum, accounting for negatives and rounding modes
     always_comb
     begin
+        // if the location of the leading one is not zero, simply XOR the sign of the product and the negative_sum signal
         if (|leading_one)
             sign_sum = (sign_product ^ negative_sum);
             
+        // if the selected rounding mode is rn, the default sign should be one
         else if (roundmode == 2'b10)
             sign_sum = 1'b1;
 
+        // otherwise, the default sign should be zero
         else
             sign_sum = 1'b0;
     end
 
-    // assign sign_sum = (|leading_one) ? (sign_product ^ negative_sum) : 1'b0;
-
     // assemble the overall result of both the multiplication and addition
     assign result_sum = {sign_sum, exponent_sum[4:0], fraction_sum};
 
+    // --------------------------------------------
 
-
-
-    logic [15:0] result_rounded;
-
-    // rounding logic
+    // POST-PROCESSING LOGIC:
+    // modify the final output, depending on the selected rounding mode
     rounding round(roundmode, A_count, kill_product, sign_z, sign_product, fraction_z, prepended_product, sticky_bit, normalized_fraction_sum, exponent_sum, result_sum, result_rounded, overflow, inexact);
-
-    
-
-    logic [15:0] rz_result;
-    logic special_case;
 
     // check for special cases and return the correct result accordingly
     special_case_determiner scd(x, new_y, new_z, roundmode, result_rounded, sign_x, sign_y, sign_z, sign_product, exponent_x, exponent_y, exponent_z, exponent_sum, fraction_x, fraction_y, fraction_z, kill_z, kill_product, result, invalid, special_case);
     
-   // --------------------------------------------
+    // --------------------------------------------
 
     // FLAG LOGIC:
     // determine which flags should be raised based on the above arithmetic
-    // 
-    // assign invalid = 1'b0;
-    // if the intermediate exponent is greater than the maximum possible value of the resultant exponent, there's overflow    
-    // assign overflow = (exponent_sum[5] | (exponent_sum[4:0] == 5'b11111));
-    // if there is rounding or overflow, the product must be inexact
-    // assign inexact = (|prepended_product[9:0] | overflow);
-    
     // for this project, we don't need to handle cases with underflow
     assign underflow = 1'b0;
 

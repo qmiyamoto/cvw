@@ -37,9 +37,9 @@ module special_case_determiner(input logic  [15:0] x, y, z,                     
 
     // additionally, determine whether x, y, and z are signaling nans or not
     // if the given input is nan and the MSB of its fractional bits is zero, it's a signaling nan
-    assign signaling_nan_x = (nan_x & ~x[9]);
-    assign signaling_nan_y = (nan_y & ~y[9]);
-    assign signaling_nan_z = (nan_z & ~z[9]);
+    assign signaling_nan_x = (nan_x & (x[9] == 1'b0));
+    assign signaling_nan_y = (nan_y & (y[9] == 1'b0));
+    assign signaling_nan_z = (nan_z & (z[9] == 1'b0));
 
     // detect overflow when the MSB of the exponent is one, or when its lower bits are all one
     assign overflow = (exponent_sum[5] | (exponent_sum[4:0] == 5'b11111));
@@ -117,194 +117,43 @@ module special_case_determiner(input logic  [15:0] x, y, z,                     
         // if we multiply two zeros together, the output changes depending on their signs (as well as the sign of z)
         else if (zero_x & zero_y)
         begin
-            if (rn)
+            // case: (+0 * -0)
+            if (((sign_x == 1'b0) & sign_y) | (sign_x & (sign_y == 1'b0)))
             begin
-                // case: (+0 * -0)
-                if (((sign_x == 1'b0) & sign_y) | (sign_x & (sign_y == 1'b0)))
-                begin
-                    // case: ((+0 * -0) + -0) = -0
-                    if (zero_z & sign_z)
-                    begin
-                        result = 16'b1000000000000000;
-                        special_case = 1'b1;
-                    end
-
-                    // case: ((+0 * -0) + +0) = -0
-                    else if (zero_z & (sign_z == 1'b0))
-                    begin
-                        result = 16'b1000000000000000;
-                        special_case = 1'b1;
-                    end
-
-                    // default: ((+0 * -0) + z) = z
-                    else
-                    begin
-                        result = z;
-                        special_case = 1'b0;
-                    end
-                end
-
-                // case: (-0 * -0)
-                else if (sign_x & sign_y)
-                begin
-                    // case: ((-0 * -0) + 0) = -0
-                    if (zero_z)
-                    begin
-                        if (sign_z)
-                        begin
-                            result = 16'b1000000000000000;
-                            special_case = 1'b1;
-                        end
-                        
-                        else
-                        begin
-                            result = 16'b0000000000000000;
-                            special_case = 1'b1;
-                        end
-                    end
-
-                    // default: ((+0 * -0) + z) = z
-                    else
-                    begin
-                        result = z;
-                        special_case = 1'b0;
-                    end
-                end
-
-                // case: (+0 * +0)
-                else if ((sign_x == 1'b0) & (sign_y == 1'b0))
-                begin
-                    // case: ((+0 * +0) + 0)
-                    if (zero_z)
-                    begin
-                        // case: ((+0 * +0) + -0) = -0
-                        if (sign_z)
-                        begin
-                            result = 16'b1000000000000000;
-                            special_case = 1'b1;
-                        end
-
-                        // case: ((+0 * +0) + +0) = +0
-                        else
-                        begin
-                            result = 16'b0000000000000000;
-                            special_case = 1'b1;
-                        end
-                    end
-                    
-                    // default: ((+0 * +0) + z) = z
-                    else
-                    begin
-                        result = z;
-                        special_case = 1'b0;
-                    end
-                end
-
-                // default: return the result garnered from rounding
-                else
-                begin
-                    result = result_rounded;
-                    special_case = 1'b0;
-                end
-
-                end
-
-           else
-            begin
-                // case: (+0 * -0)
-                if (((sign_x == 1'b0) & sign_y) | (sign_x & (sign_y == 1'b0)))
-                begin
-                    // case: ((+0 * -0) + -0) = -0
-                    if (zero_z & sign_z)
-                    begin
-                        result = 16'b1000000000000000;
-                        special_case = 1'b1;
-                    end
-
-                    // case: ((+0 * -0) + +0) = +0
-                    else if (zero_z & (sign_z == 1'b0))
-                    begin
-                        result = 16'b0000000000000000;
-                        special_case = 1'b1;
-                    end
-
-                    // default: ((+0 * -0) + z) = z
-                    else
-                    begin
-                        result = z;
-                        special_case = 1'b0;
-                    end
-                end
-
-                // case: (-0 * -0)
-                else if (sign_x & sign_y)
-                begin
-                    // case: ((-0 * -0) + 0) = +0
-                    if (zero_z)
-                    begin
-                        result = 16'b0000000000000000;
-                        special_case = 1'b1;
-                    end
-
-                    // default: ((+0 * -0) + z) = z
-                    else
-                    begin
-                        result = z;
-                        special_case = 1'b0;
-                    end
-                end
-
-                // case: (+0 * +0)
-                else if ((sign_x == 1'b0) & (sign_y == 1'b0))
-                begin
-                    // case: ((+0 * +0) + 0) = +0
-                    if (zero_z)
-                    begin
-                        result = 16'b0000000000000000;
-                        special_case = 1'b1;
-                    end
-                    
-                    // default: ((+0 * +0) + z) = z
-                    else
-                    begin
-                        result = z;
-                        special_case = 1'b0;
-                    end
-                end
-
-                // default: return the result garnered from rounding
-                else
-                begin
-                    result = result_rounded;
-                    special_case = 1'b0;
-                end
-
-                end
-        end
-
-        // if we are multiplying by at least one negative zero, the output changes depending on the situations below
-        else if ((zero_x & sign_x) | (zero_y & sign_y))
-        begin
-            if (rn)
-            begin
-                // case: ((x * -0) + -0) = -0, or ((-0 * y) + -0) = -0
+                // case: ((+0 * -0) + -0) = -0
                 if (zero_z & sign_z)
                 begin
                     result = 16'b1000000000000000;
                     special_case = 1'b1;
                 end
 
-                // case: ((x * -0) + 0), or ((-0 * y) + 0)
+                // case: ((+0 * -0) + +0)
                 else if (zero_z & (sign_z == 1'b0))
                 begin
-                    // case: ((x * -0) + -0) = -0, or ((-0 * y) + -0) = -0
-                    if (sign_product)
+                    result = {rn, 15'b0};
+                    special_case = 1'b1;
+                end
+
+                // default: ((+0 * -0) + z) = z
+                else
+                begin
+                    result = z;
+                    special_case = 1'b0;
+                end
+            end
+                
+            // case: (-0 * -0)
+            else if (sign_x & sign_y)
+            begin
+                // case: ((-0 * -0) + 0)
+                if (zero_z)
+                begin
+                    if (rn)
                     begin
-                        result = 16'b1000000000000000;
+                        result = {sign_z, 15'b0};
                         special_case = 1'b1;
                     end
-                    
-                    // case: ((x * -0) + +0) = +0, or ((-0 * y) + +0) = +0
+
                     else
                     begin
                         result = 16'b0000000000000000;
@@ -312,7 +161,7 @@ module special_case_determiner(input logic  [15:0] x, y, z,                     
                     end
                 end
 
-                // default: (x * -0) + z) = z, or ((-0 * y) + z) = z
+                // default: ((+0 * -0) + z) = z
                 else
                 begin
                     result = z;
@@ -320,115 +169,124 @@ module special_case_determiner(input logic  [15:0] x, y, z,                     
                 end
             end
 
-            else
+        // case: (+0 * +0)
+            else if ((sign_x == 1'b0) & (sign_y == 1'b0))
             begin
-                // case: ((x * -0) + -0), or ((-0 * y) + -0)
-                if (zero_z & sign_z)
+                // case: ((+0 * +0) + 0)
+                if (zero_z)
                 begin
-                    // case: (-(x * -0) + -0) = -0, or (-(-0 * y) + -0) = -0
-                    if (sign_product)
+                    if (rn)
                     begin
-                        result = 16'b1000000000000000;
+                        result = {sign_z, 15'b0};
                         special_case = 1'b1;
                     end
-                        
-                    // case: ((x * -0) + -0) = +0, or ((-0 * y) + -0) = +0
+
                     else
                     begin
                         result = 16'b0000000000000000;
                         special_case = 1'b1;
                     end
                 end
-
-                // case: ((x * -0) + +0) = +0, or ((-0 * y) + +0) = +0
-                else if (zero_z & (sign_z == 1'b0))
-                begin
-                    result = 16'b0000000000000000;
-                    special_case = 1'b1;
-                end
-
-                // default: (x * -0) + z) = z, or ((-0 * y) + z) = z
+                    
+                // default: ((+0 * +0) + z) = z
                 else
                 begin
                     result = z;
                     special_case = 1'b0;
                 end
+            end
+
+            // default: return the result garnered from rounding
+            else
+            begin
+                result = result_rounded;
+                special_case = 1'b0;
+            end
+        end
+
+        // if we are multiplying by at least one negative zero, the output changes depending on the situations below
+        else if ((zero_x & sign_x) | (zero_y & sign_y))
+        begin
+            // case: ((x * -0) + -0), or ((-0 * y) + -0)
+            if (zero_z & sign_z)
+            begin
+                if (rn == 1'b0)
+                begin
+                    result = {sign_product, 15'b0};
+                    special_case = 1'b1;
+                end
+
+                else
+                begin
+                    result = 16'b1000000000000000;
+                    special_case = 1'b1;
+                end
+            end
+
+            // case: ((x * -0) + +0), or ((-0 * y) + +0)
+            else if (zero_z & (sign_z == 1'b0))
+            begin
+                if (rn)
+                begin
+                    result = {sign_product, 15'b0};
+                    special_case = 1'b1;
+                end
+
+                else
+                begin
+                    result = 16'b0000000000000000;
+                    special_case = 1'b1;
+                end
+            end
+
+            // default: (x * -0) + z) = z, or ((-0 * y) + z) = z
+            else
+            begin
+                result = z;
+                special_case = 1'b0;
             end
         end
 
         // if we are multiplying by at least one positive zero, the output changes depending on the situations below
         else if ((zero_x & (sign_x == 1'b0)) | (zero_y & (sign_y == 1'b0)))
         begin
-            if (rn)
+            // case: ((x * +0) + -0), or ((+0 * y) + -0)
+            if (zero_z & sign_z)
             begin
-                // adding to negative zero
-                // case: ((x * +0) + 0) = -0, or ((+0 * y) + 0) = -0
-                if (zero_z & sign_z)
+                if (rn == 1'b0)
+                begin
+                    result = {sign_product, 15'b0};
+                    special_case = 1'b1;
+                end
+
+                else
                 begin
                     result = 16'b1000000000000000;
                     special_case = 1'b1;
                 end
-
-                // case: ((x * +0) + 0), or ((+0 * y) + 0)
-                else if (zero_z & (sign_z == 1'b0))
-                begin
-                    // case: ((x * +0) + -0) = -0, or ((+0 * y) + -0) = -0 
-                    if (sign_product)
-                    begin
-                        result = 16'b1000000000000000;
-                        special_case = 1'b1;
-                    end
-
-                    // case: ((x * +0) + +0) = +0, or ((+0 * y) + +0) = +0
-                    else
-                    begin
-                        result = 16'b0000000000000000;
-                        special_case = 1'b1;
-                    end
-                end
-
-                // default: ((x * +0) + z) = z, or ((+0 * y) + z) = z
-                else
-                begin
-                    result = z;
-                    special_case = 1'b0;
-                end
             end
 
-            else
+            // case: ((x * +0) + +0), or ((+0 * y) + +0)
+            else if (zero_z & (sign_z == 1'b0))
             begin
-                // adding to negative zero
-                // case: ((x * +0) + -0), or ((+0 * y) + -0)
-                if (zero_z & sign_z)
+                if (rn)
                 begin
-                    // case: (-(x * +0) + -0) = -0, or (-(+0 * y) + -0) = -0
-                    if (sign_product)
-                    begin
-                        result = 16'b1000000000000000;
-                        special_case = 1'b1;
-                    end
-                        
-                    // case: ((x * +0) + -0) = +0, or ((+0 * y) + -0) = +0
-                    else
-                    begin
-                        result = 16'b0000000000000000;
-                        special_case = 1'b1;
-                    end
+                    result = {sign_product, 15'b0};
+                    special_case = 1'b1;
                 end
 
-                // case: ((x * +0) + +0) = +0, or ((+0 * y) + +0) = +0
-                else if (zero_z & (sign_z == 1'b0))
+                else
                 begin
                     result = 16'b0000000000000000;
                     special_case = 1'b1;
                 end
+            end
 
-                // default: ((x * +0) + z) = z, or ((+0 * y) + z) = z
-                else
-                begin
-                    result = z;
-                    special_case = 1'b0;
-                end
+            // default: ((x * +0) + z) = z, or ((+0 * y) + z) = z
+            else
+            begin
+                result = z;
+                special_case = 1'b0;
             end
         end
 
@@ -478,6 +336,5 @@ module special_case_determiner(input logic  [15:0] x, y, z,                     
             special_case = 1'b0;
         end
     end
-
 
 endmodule

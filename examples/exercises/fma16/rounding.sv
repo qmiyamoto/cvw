@@ -8,50 +8,46 @@
 ///////////////////////////////////////////////
 
 module rounding(input logic  [1:0]  roundmode,                  // original input to the FMA unit, sets the rounding mode
-                input logic  [6:0]  A_count,
-                input logic         kill_product,
-                input logic         sign_z, sign_product,
-                input logic  [9:0]  fraction_z,
-                input logic  [21:0] prepended_product,
+                input logic  [6:0]  A_count,                    // alignment shift amount
+                input logic         kill_product,               // signal that the product has been killed
+                input logic         sign_z, sign_product,       // signs of z and the intermediate product
+                input logic  [9:0]  fraction_z,                 // fractional bits of z
+                input logic  [21:0] prepended_product,          // fractional bits of the intermediate product, as calculated with prepended x and y
                 input logic         abbreviated_sticky_bit,     // sticky bit calculated with the main FMA's abbreviated logic
-                input logic  [43:0] normalized_fraction_sum,    // 
-                input logic  [5:0]  original_exponent_sum,      // exponential bits of the intermediate sum
-                input logic  [15:0] result_sum,                 // fractional bits of the intermediate sum
-                output logic [15:0] result_rounded,             // 
-                output logic        overflow, inexact
+                input logic  [43:0] normalized_fraction_sum,    // fractional bits of the intermediate sum, post-normalization shift
+                input logic  [5:0]  original_exponent_sum,      // expanded exponential bits of the intermediate sum, accounting for overflow
+                input logic  [15:0] result_sum,                 // output of addition
+                output logic [15:0] result_rounded,             // final result returned from the rounding unit
+                output logic        overflow, inexact           // overflow and inexact flags
                );
     
-    logic       sign_sum;        // sign of sum
-    logic [4:0] exponent_sum;    // 
-    logic [9:0] fraction_sum;    // 
+    logic       sign_sum;        // sign of the intermediate sum
+    logic [4:0] exponent_sum;    // exponential bits of the intermediate sum, without accounting for overflow
+    logic [9:0] fraction_sum;    // fractional bits of the intermediate sum, properly aligned and sized
 
-    logic sticky_bit;                                        // 
-    logic initial_overflow;                                  // 
-    logic least_significant_bit, guard_bit, rounding_bit;    //
-    logic rz, rne, rp, rn;                                   // 
+    logic sticky_bit;                                        // sticky bit given by full calculations
+    logic initial_overflow;                                  // signal for any overflow that initially occurs in the main FMA unit
+    logic least_significant_bit, guard_bit, rounding_bit;    // least significant, guard, and rounding bits of the result
+    logic rz, rne, rp, rn;                                   // rounding modes
 
-    logic [11:0] prepended_rounded, fraction_rounded;    // 
-    logic [5:0]  exponent_rounded;                       // 
-    logic [15:0] rounded_result;                         // 
-    logic        overflow_fraction_rounded;              // 
+    logic [11:0] prepended_rounded;                      // expanded fractional bits of the sum, with a prepended one and room for overflow
+    logic [11:0] fraction_rounded;                       // expanded fractional bits of the rounded result, after adding a one
+    logic [5:0]  exponent_rounded;                       // expanded exponential bits of the rounded result
+    logic        overflow_fraction_rounded;              // signal that the result's fractional bits have overflowed during rounding
 
-    logic [15:0] truncated;           // 
-    logic [15:0] rounded;             // 
-    logic        maximum_fraction;    // 
+    logic [15:0] truncated;              // truncated result
+    logic [15:0] rounded;                // rounded result
+    logic        negative_sticky_bit;    // signal that there's a negative sticky bit
 
-    logic maximum_number_set;
+    logic maximum_number_set;    // signal for the result being set to the maximum possible number (either positive or negative)
 
     // use bit-swizzling to segment the result of addition accordingly
     assign {sign_sum, exponent_sum, fraction_sum} = result_sum;
-
 
     // determine the values of L, G, and R 
     assign least_significant_bit = normalized_fraction_sum[22];
     assign guard_bit = normalized_fraction_sum[21];
     assign rounding_bit = normalized_fraction_sum[20];
-
-
-
 
     // determine the value of T
     // essentially, if sticky_bit hadn't already been set with the adder's abbreviated logic...
@@ -74,12 +70,12 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
     assign rp = (roundmode == 2'b11);
     assign rn = (roundmode == 2'b10);
 
-
-    logic negative_sticky_bit;
-    assign negative_sticky_bit = (~(|fraction_z) & rne & kill_product & (A_count == 7'b1111111) & prepended_product[21] & ~(sign_product == sign_z));
-
-
-    // kill G to set G equal to zero
+    // detect the presence of a negative sticky bit
+    // note: a negative sticky bit can be set when...
+    // ...we're in rne mode, A_count = -1, we're killing the product, the fractional bits of z are all zero, the MSB of the prepended product is one, and the product and z have different signs
+    // also note: this is only truly significant when L, G, and R|T are all equal to one
+    // in other words, set a signal to kill the guard bit
+    assign negative_sticky_bit = (rne & (A_count == 7'b1111111) & kill_product & (|fraction_z == 1'b0) & prepended_product[21] & (sign_product != sign_z));
 
     // prepend a one to the fractional bits of sum
     // additionally, provide space for potential overflow
@@ -174,7 +170,9 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
             // L = X, G = 1, R | T = 1
             else if (guard_bit & (rounding_bit | sticky_bit))
             begin
-                if ((rne & ~negative_sticky_bit) | rp)
+                // if there's a negative sticky bit, effectively kill the guard bit and return a truncated result instead
+                // otherwise, proceed as normal
+                if ((rne & (negative_sticky_bit == 1'b0)) | rp)
                 begin
                     result_rounded = rounded;
                     maximum_number_set = 1'b0;
@@ -242,8 +240,7 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
             // L = 0, G = `1, R | T = 0
             else if ((least_significant_bit == 1'b0) & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
             begin
-                // if ((rne & sticky_bit) | rn)
-                if (rn) // rne | rn
+                if (rn)
                 begin
                     result_rounded = rounded;
                     maximum_number_set = 1'b0;
@@ -275,8 +272,9 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
             // L = X, G = 1, R | T = 1
             else if (guard_bit & (rounding_bit | sticky_bit))
             begin
-            // changes here?????
-                if ((rne & ~negative_sticky_bit) | rn)
+                // if there's a negative sticky bit, effectively kill the guard bit and return a truncated result instead
+                // otherwise, proceed as normal
+                if ((rne & (negative_sticky_bit == 1'b0)) | rn)
                 begin
                     result_rounded = rounded;
                     maximum_number_set = 1'b0;
@@ -323,9 +321,10 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
         end
     end
 
-    assign overflow = ((original_exponent_sum > 6'd30) | (overflow_fraction_rounded & (exponent_rounded > 6'd30)))
-    & (~maximum_number_set);
+    // set the overflow flag when ~~~
+    assign overflow = (((original_exponent_sum > 6'd30) | (overflow_fraction_rounded & (exponent_rounded > 6'd30))) & (maximum_number_set == 1'b0));
 
+    // set the inexact flag when ~~~
     assign inexact = (rounding_bit | guard_bit | sticky_bit | overflow);
    
 endmodule
