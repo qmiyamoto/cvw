@@ -74,7 +74,7 @@ module fma16(input logic  [15:0] x, y, z,                 // given inputs to per
     // compute the exponent of the product
     always_comb
     begin
-        if ((x[14:0] == 15'b0) |(new_y[14:0] == 15'b0))
+        if ((x[14:0] == 15'b0) | (new_y[14:0] == 15'b0))
             // keep the exponent at zero if either x or y has exponents equivalent to such
             exponent_product = 7'b0;
 
@@ -85,7 +85,7 @@ module fma16(input logic  [15:0] x, y, z,                 // given inputs to per
     end
 
     // determine the sign of the product, accounting for negatives
-    assign sign_product = (sign_x ^ sign_y);
+    assign sign_product = ((sign_x ^ sign_y) ^ negp);
 
     // --------------------------------------------
 

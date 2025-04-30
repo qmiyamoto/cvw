@@ -25,7 +25,7 @@ module testbench_fma16;
       $dumpvars(0, testbench_fma16);
 
       //$readmemh("tests/fma_special_rp.tv", testvectors);
-      $readmemh("work/fma_0.tv", testvectors);
+      $readmemh("work/baby_torture.tv", testvectors);
       vectornum = 0; errors = 0;
       reset = 1; #22; reset = 0;
     end

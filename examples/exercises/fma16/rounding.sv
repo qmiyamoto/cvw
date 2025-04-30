@@ -39,8 +39,6 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
     logic [15:0] rounded;                // rounded result
     logic        negative_sticky_bit;    // signal that there's a negative sticky bit
 
-    logic maximum_number_set;    // signal for the result being set to the maximum possible number (either positive or negative)
-
     // use bit-swizzling to segment the result of addition accordingly
     assign {sign_sum, exponent_sum, fraction_sum} = result_sum;
 
@@ -114,57 +112,36 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
         begin
             // L = X, G = 0, R | T = 0
             if ((guard_bit == 1'b0) & ((rounding_bit | sticky_bit) == 1'b0))
-            begin
                 result_rounded = truncated;
-                maximum_number_set = 1'b0;
-            end
 
             // L = X, G = 0, R | T = 1
             else if ((guard_bit == 1'b0) & (rounding_bit | sticky_bit))
             begin
                 if (rp)
-                begin
                     result_rounded = rounded;
-                    maximum_number_set = 1'b0;
-                end
 
                 else
-                begin
                     result_rounded = truncated;
-                    maximum_number_set = 1'b0;
-                end
             end
 
             // L = 0, G = 1, R | T = 0
             else if ((least_significant_bit == 1'b0) & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
             begin
                 if (rp)
-                begin
                     result_rounded = rounded;
-                    maximum_number_set = 1'b0;
-                end
 
                 else
-                begin
                     result_rounded = truncated;
-                    maximum_number_set = 1'b0;
-                end
             end
             
             // L = 1, G = 1, R | T = 0
             else if (least_significant_bit & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
             begin
                 if (rne | rp)
-                begin
                     result_rounded = rounded;
-                    maximum_number_set = 1'b0;
-                end
 
                 else
-                begin
                     result_rounded = truncated;
-                    maximum_number_set = 1'b0;
-                end
             end
 
             // L = X, G = 1, R | T = 1
@@ -173,42 +150,27 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
                 // if there's a negative sticky bit, effectively kill the guard bit and return a truncated result instead
                 // otherwise, proceed as normal
                 if ((rne & (negative_sticky_bit == 1'b0)) | rp)
-                begin
                     result_rounded = rounded;
-                    maximum_number_set = 1'b0;
-                end
 
                 else
-                begin
                     result_rounded = truncated;
-                    maximum_number_set = 1'b0;
-                end
             end
 
             // default case
             else
-            begin
                 result_rounded = truncated;
-                maximum_number_set = 1'b0;
-            end
         end
 
         // Sign = 0, Overflow = 1
         else if ((sign_sum == 1'b0) & initial_overflow)
         begin
             if (rne | rp)
-            begin
                 // positive infinity
                 result_rounded = 16'b0111110000000000;
-                maximum_number_set = 1'b0;
-            end
 
             else
-            begin
                 // positive maximum number
                 result_rounded = 16'b0111101111111111;
-                maximum_number_set = 1'b1;
-            end
         end
 
         // Sign = 1, Overflow = 0
@@ -216,57 +178,36 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
         begin
             // L = X, G = 0, R | T = 0
             if ((guard_bit == 1'b0) & ((rounding_bit | sticky_bit) == 1'b0))
-            begin
                 result_rounded = truncated;
-                maximum_number_set = 1'b0;
-            end
 
             // L = X, G = 0, R | T = 1
             else if ((guard_bit == 1'b0) & (rounding_bit | sticky_bit))
             begin
                 if (rn)
-                begin
                     result_rounded = rounded;
-                    maximum_number_set = 1'b0;
-                end
 
                 else
-                begin
                     result_rounded = truncated;
-                    maximum_number_set = 1'b0;
-                end
             end
             
             // L = 0, G = `1, R | T = 0
             else if ((least_significant_bit == 1'b0) & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
             begin
                 if (rn)
-                begin
                     result_rounded = rounded;
-                    maximum_number_set = 1'b0;
-                end
 
                 else
-                begin
                     result_rounded = truncated;
-                    maximum_number_set = 1'b0;
-                end
             end
 
             // L = 1, G = 1, R | T = 0
             else if (least_significant_bit & guard_bit & ((rounding_bit | sticky_bit) == 1'b0))
             begin
                 if (rne | rn)
-                begin
                     result_rounded = rounded;
-                    maximum_number_set = 1'b0;
-                end
 
                 else
-                begin
                     result_rounded = truncated;
-                    maximum_number_set = 1'b0;
-                end
             end
 
             // L = X, G = 1, R | T = 1
@@ -275,50 +216,32 @@ module rounding(input logic  [1:0]  roundmode,                  // original inpu
                 // if there's a negative sticky bit, effectively kill the guard bit and return a truncated result instead
                 // otherwise, proceed as normal
                 if ((rne & (negative_sticky_bit == 1'b0)) | rn)
-                begin
                     result_rounded = rounded;
-                    maximum_number_set = 1'b0;
-                end
 
                 else
-                begin
                     result_rounded = truncated;
-                    maximum_number_set = 1'b0;
-                end
             end
 
             // default case
             else
-            begin
                 result_rounded = truncated;
-                maximum_number_set = 1'b0;
-            end
         end
 
         // Sign = 1, Overflow = 1
         else if (sign_sum & initial_overflow)
         begin
             if (rne | rn)
-            begin
                 // negative infinity
                 result_rounded = 16'b1111110000000000;
-                maximum_number_set = 1'b0;
-            end
             
             else
-            begin
                 // negative maximum number
                 result_rounded = 16'b1111101111111111;
-                maximum_number_set = 1'b1;
-            end
         end
 
         // default case
         else
-        begin
             result_rounded = truncated;
-            maximum_number_set = 1'b0;
-        end
     end
 
     // set the overflow flag when ~~~
